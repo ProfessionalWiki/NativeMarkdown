@@ -71,6 +71,10 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 	}
 
 	public function testPreloadedMissingFileRendersUploadLinkWithoutPerEmbedLookup(): void {
+		// The upload red link only appears where uploads are enabled; vanilla
+		// MediaWiki defaults them off, so pin it for a deterministic assertion.
+		$this->overrideConfigValue( MainConfigNames::EnableUploads, true );
+
 		$repoGroup = $this->createMock( RepoGroup::class );
 		$repoGroup->method( 'findFiles' )->willReturn( [] );
 		$repoGroup->expects( $this->never() )->method( 'findFile' );

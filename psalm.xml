@@ -14,7 +14,9 @@
 	<extraFiles>
 		<directory name="../../includes" />
 		<directory name="../../vendor/wikimedia" />
-		<directory name="../../vendor/league" />
+		<!-- The extension's own vendor: portable across the dev env and CI, where
+		     league/commonmark is not merged into MediaWiki's vendor directory. -->
+		<directory name="vendor/league" />
 	</extraFiles>
 	<issueHandlers>
 		<MissingPropertyType errorLevel="suppress" />

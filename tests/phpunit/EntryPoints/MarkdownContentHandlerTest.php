@@ -137,6 +137,10 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 	}
 
 	public function testMissingFileEmbedRegistersImageAndRendersRedLink(): void {
+		// A missing file renders an upload red link only where uploads are enabled;
+		// vanilla MediaWiki defaults them off, so pin it for a deterministic assertion.
+		$this->overrideConfigValue( MainConfigNames::EnableUploads, true );
+
 		$output = $this->getParserOutput( 'Look: [[File:Surely Missing File.png|200px|alt=Nothing]]' );
 
 		$this->assertArrayHasKey( 'Surely_Missing_File.png', $output->getImages() );
