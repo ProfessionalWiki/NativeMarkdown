@@ -1,0 +1,1 @@
+[[Some Page|<script>alert(1)</script>]]

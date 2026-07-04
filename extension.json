@@ -1,0 +1,63 @@
+{
+	"name": "NativeMarkdown",
+	"version": "0.1.0",
+
+	"author": [
+		"[https://professional.wiki/ Professional Wiki]",
+		"[https://www.EntropyWins.wtf/mediawiki Jeroen De Dauw]"
+	],
+
+	"url": "https://github.com/ProfessionalWiki/NativeMarkdown",
+
+	"descriptionmsg": "nativemarkdown-description",
+
+	"license-name": "GPL-2.0-or-later",
+
+	"requires": {
+		"MediaWiki": ">= 1.43.0",
+		"platform": {
+			"php": ">= 8.1"
+		}
+	},
+
+	"MessagesDirs": {
+		"NativeMarkdown": [
+			"i18n"
+		]
+	},
+
+	"AutoloadNamespaces": {
+		"ProfessionalWiki\\NativeMarkdown\\": "src/",
+		"ProfessionalWiki\\NativeMarkdown\\Tests\\": "tests/phpunit/"
+	},
+
+	"ContentHandlers": {
+		"markdown": "ProfessionalWiki\\NativeMarkdown\\EntryPoints\\MarkdownContentHandler"
+	},
+
+	"Hooks": {
+		"ContentHandlerDefaultModelFor": "ProfessionalWiki\\NativeMarkdown\\EntryPoints\\NativeMarkdownHooks::onContentHandlerDefaultModelFor",
+		"CodeEditorGetPageLanguage": "ProfessionalWiki\\NativeMarkdown\\EntryPoints\\NativeMarkdownHooks::onCodeEditorGetPageLanguage"
+	},
+
+	"config": {
+		"NativeMarkdownNamespaces": {
+			"description": "Namespaces (IDs) in which new pages default to the markdown content model.",
+			"value": []
+		},
+		"NativeMarkdownEverywhere": {
+			"description": "If new pages in all content namespaces should default to the markdown content model.",
+			"value": false
+		},
+		"NativeMarkdownSuffixDetection": {
+			"description": "If new pages with a title ending in .md should default to the markdown content model.",
+			"value": false
+		},
+		"NativeMarkdownAllowExternalImages": {
+			"description": "If external images in markdown should be embedded. When false (default), they are rendered as plain links.",
+			"value": false
+		}
+	},
+
+	"manifest_version": 2
+}

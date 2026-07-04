@@ -1,0 +1,513 @@
+<?php
+
+declare( strict_types = 1 );
+
+namespace ProfessionalWiki\NativeMarkdown\Application;
+
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Exception\CommonMarkException;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\DefaultAttributes\DefaultAttributesExtension;
+use League\CommonMark\Extension\CommonMark\Node\Block\Heading;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
+use League\CommonMark\Extension\Footnote\FootnoteExtension;
+use League\CommonMark\Extension\FrontMatter\Data\SymfonyYamlFrontMatterParser;
+use League\CommonMark\Extension\FrontMatter\FrontMatterParser;
+use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
+use League\CommonMark\Extension\Table\Table;
+use League\CommonMark\Extension\Table\TableCell;
+use League\CommonMark\Node\Block\AbstractBlock;
+use League\CommonMark\Node\Block\Document;
+use League\CommonMark\Node\Inline\Newline;
+use League\CommonMark\Node\Inline\Text;
+use League\CommonMark\Node\Node;
+use League\CommonMark\Node\RawMarkupContainerInterface;
+use League\CommonMark\Node\StringContainerInterface;
+use League\CommonMark\Parser\MarkdownParser;
+use League\CommonMark\Renderer\HtmlRenderer;
+use League\CommonMark\Util\HtmlFilter;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ExternalLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNode;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNodeRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholder;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholderRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNode;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNodeRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkParser;
+
+/**
+ * The markdown rendering pipeline: CommonMark + GFM + footnotes + front matter,
+ * extended with wikilink syntax. Pure application logic; wiki behavior is
+ * injected through the WikiTitleParser and PageLinkRenderer ports.
+ */
+final class MarkdownRenderer {
+
+	private const WIKI_LINK_PARSER_PRIORITY = 100;
+	private const RENDERER_OVERRIDE_PRIORITY = 10;
+
+	private MarkdownParser $parser;
+	private HtmlRenderer $htmlRenderer;
+	private FrontMatterParser $frontMatterParser;
+
+	public function __construct(
+		private readonly WikiTitleParser $titleParser,
+		private readonly PageLinkRenderer $pageLinkRenderer,
+		private readonly FileEmbedRenderer $fileEmbedRenderer,
+		bool $allowExternalImages,
+		int $maxNestingLevel,
+		private readonly ?string $tocPlaceholderHtml,
+		bool $noFollowExternalLinks
+	) {
+		$environment = $this->newEnvironment( $allowExternalImages, $maxNestingLevel, $noFollowExternalLinks );
+
+		$this->parser = new MarkdownParser( $environment );
+		$this->htmlRenderer = new HtmlRenderer( $environment );
+		$this->frontMatterParser = new FrontMatterParser( new SymfonyYamlFrontMatterParser() );
+	}
+
+	private function newEnvironment(
+		bool $allowExternalImages,
+		int $maxNestingLevel,
+		bool $noFollowExternalLinks
+	): Environment {
+		$environment = new Environment( [
+			'html_input' => HtmlFilter::ESCAPE,
+			'allow_unsafe_links' => false,
+			'max_nesting_level' => $maxNestingLevel,
+			// Markdown has no syntax for CSS classes, so tables get MediaWiki's
+			// standard wikitable styling to match how wikitext tables look.
+			'default_attributes' => [
+				Table::class => [ 'class' => 'wikitable' ],
+			],
+		] );
+
+		$environment->addExtension( new CommonMarkCoreExtension() );
+		$environment->addExtension( new GithubFlavoredMarkdownExtension() );
+		$environment->addExtension( new FootnoteExtension() );
+		$environment->addExtension( new DefaultAttributesExtension() );
+
+		$environment->addInlineParser( new WikiLinkParser(), self::WIKI_LINK_PARSER_PRIORITY );
+		$environment->addRenderer( WikiLinkNode::class, new WikiLinkNodeRenderer( $this->pageLinkRenderer ) );
+		$environment->addRenderer( FileEmbedNode::class, new FileEmbedNodeRenderer( $this->fileEmbedRenderer ) );
+		$environment->addRenderer( TocPlaceholder::class, new TocPlaceholderRenderer() );
+		$environment->addRenderer(
+			Link::class,
+			new ExternalLinkRenderer( $noFollowExternalLinks ),
+			self::RENDERER_OVERRIDE_PRIORITY
+		);
+
+		if ( !$allowExternalImages ) {
+			$environment->addRenderer(
+				Image::class,
+				new ImageLinkRenderer( $noFollowExternalLinks ),
+				self::RENDERER_OVERRIDE_PRIORITY
+			);
+		}
+
+		return $environment;
+	}
+
+	/**
+	 * Total over content: any input produces a result. When the markdown
+	 * machinery cannot handle the input at all, the source is shown escaped
+	 * instead of failing. Infrastructure failures (database errors from the
+	 * link and file adapters) propagate — falling back on those would cache
+	 * degraded output and empty the page's link tables.
+	 */
+	public function render( string $markdown, bool $generateHtml ): RenderedMarkdown {
+		try {
+			return $this->renderDocument( $markdown, $generateHtml );
+		} catch ( CommonMarkException ) {
+			return $this->escapedSourceFallback( $markdown, $generateHtml );
+		}
+	}
+
+	private function renderDocument( string $markdown, bool $generateHtml ): RenderedMarkdown {
+		[ $frontMatter, $content ] = $this->extractFrontMatter( $markdown );
+
+		$document = $this->parser->parse( $content );
+
+		[ $links, $categories, $files ] = $this->resolveWikiLinks( $document );
+		$this->preloadLinkExistence( $links );
+		$this->preloadFileLookups( $files, $generateHtml );
+		$sections = $this->processHeadings( $document );
+
+		return new RenderedMarkdown(
+			html: $generateHtml ? $this->renderHtml( $document, $sections ) : '',
+			links: $links,
+			categories: $categories,
+			files: $files,
+			sections: $sections,
+			externalLinks: $this->collectExternalLinks( $document ),
+			frontMatter: $frontMatter
+		);
+	}
+
+	/**
+	 * The visible words of the document for the search index: markdown and wiki
+	 * markup removed, front matter and category assignments excluded. No HTML is
+	 * rendered and no page-existence lookups happen.
+	 */
+	public function extractPlainText( string $markdown ): string {
+		try {
+			[ , $content ] = $this->extractFrontMatter( $markdown );
+			$document = $this->parser->parse( $content );
+			$this->resolveWikiLinks( $document );
+
+			return $this->documentPlainText( $document );
+		} catch ( CommonMarkException ) {
+			// The parser rejects input the YAML front matter parser also cannot
+			// read (e.g. invalid UTF-8), so strip the front matter block directly.
+			return $this->collapseWhitespace( $this->stripLeadingFrontMatterBlock( $markdown ) );
+		}
+	}
+
+	private function stripLeadingFrontMatterBlock( string $markdown ): string {
+		// Byte-oriented (no /u) so it survives invalid UTF-8 in the fallback path.
+		// \R mirrors the delimiter grammar of league's FrontMatterParser, so the
+		// fallback strips exactly the block the normal path would have hidden.
+		if ( preg_match( '/\A---\R.*?\R---\R?/s', $markdown, $matches ) === 1 ) {
+			return substr( $markdown, strlen( $matches[0] ) );
+		}
+
+		return $markdown;
+	}
+
+	private function documentPlainText( Document $document ): string {
+		$text = '';
+
+		foreach ( $document->iterator() as $node ) {
+			// Block boundaries become whitespace so adjacent blocks stay separate words.
+			$separator = $node instanceof AbstractBlock ? ' ' : '';
+			$text .= $separator . $this->nodeSearchText( $node );
+		}
+
+		return $this->collapseWhitespace( $text );
+	}
+
+	/**
+	 * Differs deliberately from the heading-text rules in plainText(): raw HTML
+	 * is escaped by the renderer and thus visible, so its text is searchable,
+	 * and labels get padding so they never fuse with neighboring words.
+	 * A new inline node type needs an arm in both methods.
+	 */
+	private function nodeSearchText( Node $node ): string {
+		return match ( true ) {
+			$node instanceof WikiLinkNode => ' ' . $node->displayLabel() . ' ',
+			$node instanceof FileEmbedNode => ' ' . ( $node->embed->caption ?? $node->embed->altText ?? '' ) . ' ',
+			$node instanceof StringContainerInterface => $node->getLiteral(),
+			$node instanceof Newline => ' ',
+			default => ''
+		};
+	}
+
+	private function collapseWhitespace( string $text ): string {
+		$pattern = mb_check_encoding( $text, 'UTF-8' ) ? '/\s+/u' : '/\s+/';
+
+		return trim( preg_replace( $pattern, ' ', $text ) ?? $text );
+	}
+
+	private function escapedSourceFallback( string $markdown, bool $generateHtml ): RenderedMarkdown {
+		return new RenderedMarkdown(
+			html: $generateHtml
+				? '<pre>' . htmlspecialchars( $markdown, ENT_QUOTES | ENT_SUBSTITUTE ) . "</pre>\n"
+				: '',
+			links: [],
+			categories: [],
+			files: [],
+			sections: [],
+			externalLinks: [],
+			frontMatter: null
+		);
+	}
+
+	/**
+	 * Existence lookups happen in one batch instead of one query per link.
+	 * This also warms the cache used when the wiki records the links.
+	 *
+	 * @param WikiTitle[] $links
+	 */
+	private function preloadLinkExistence( array $links ): void {
+		$localPages = array_values( array_filter(
+			$links,
+			static fn ( WikiTitle $link ) => !$link->isInterwiki()
+		) );
+
+		if ( $localPages !== [] ) {
+			$this->pageLinkRenderer->preloadExistence( $localPages );
+		}
+	}
+
+	/**
+	 * Files are only looked up while rendering HTML, so metadata-only parses
+	 * skip the preload entirely.
+	 *
+	 * @param FileEmbed[] $files
+	 */
+	private function preloadFileLookups( array $files, bool $generateHtml ): void {
+		if ( $generateHtml && $files !== [] ) {
+			$this->fileEmbedRenderer->preloadFiles(
+				array_map( static fn ( FileEmbed $embed ) => $embed->title, $files )
+			);
+		}
+	}
+
+	/**
+	 * @param Section[] $sections
+	 */
+	private function renderHtml( Document $document, array $sections ): string {
+		if ( $this->tocPlaceholderHtml !== null && $sections !== [] ) {
+			$this->insertTocPlaceholder( $document );
+		}
+
+		return $this->htmlRenderer->renderDocument( $document )->getContent();
+	}
+
+	/**
+	 * Puts the ToC placeholder before the top-level block containing the first
+	 * heading, mirroring where the wikitext parser places the table of contents.
+	 */
+	private function insertTocPlaceholder( Document $document ): void {
+		$firstHeading = $this->nodesOfType( $document, Heading::class )[0] ?? null;
+
+		if ( $firstHeading === null ) {
+			return;
+		}
+
+		$this->topLevelAncestor( $document, $firstHeading )
+			?->insertBefore( new TocPlaceholder( $this->tocPlaceholderHtml ?? '' ) );
+	}
+
+	private function topLevelAncestor( Document $document, Node $node ): ?Node {
+		for ( $ancestor = $node; $ancestor !== null; $ancestor = $ancestor->parent() ) {
+			if ( $ancestor->parent() === $document ) {
+				return $ancestor;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * @return array{0: array<int|string, mixed>|null, 1: string}
+	 */
+	private function extractFrontMatter( string $markdown ): array {
+		try {
+			$input = $this->frontMatterParser->parse( $this->withTrailingNewline( $markdown ) );
+		} catch ( \Exception ) {
+			return [ null, $markdown ];
+		}
+
+		$frontMatter = $input->getFrontMatter();
+
+		if ( !is_array( $frontMatter ) ) {
+			return [ null, $markdown ];
+		}
+
+		return [ $frontMatter, $input->getContent() ];
+	}
+
+	/**
+	 * MediaWiki's pre-save transform trims trailing whitespace, but the front
+	 * matter parser requires a newline after the closing delimiter.
+	 */
+	private function withTrailingNewline( string $markdown ): string {
+		return str_ends_with( $markdown, "\n" ) ? $markdown : $markdown . "\n";
+	}
+
+	/**
+	 * Resolves all wikilink nodes: invalid targets degrade to literal text,
+	 * category assignments are collected and removed from the document,
+	 * file targets become embeds, and remaining links are collected for
+	 * registration.
+	 *
+	 * @return array{0: WikiTitle[], 1: Category[], 2: FileEmbed[]}
+	 */
+	private function resolveWikiLinks( Document $document ): array {
+		$links = [];
+		$categories = [];
+		$files = [];
+
+		foreach ( $this->nodesOfType( $document, WikiLinkNode::class ) as $node ) {
+			$title = $this->titleParser->parse( $node->target );
+
+			if ( $title === null ) {
+				$node->replaceWith( new Text( $node->rawSource ) );
+				continue;
+			}
+
+			if ( $title->isCategory() && !$node->hasLeadingColon ) {
+				$categories[] = new Category( $title, $node->label ?? '' );
+				$this->removeCategoryNode( $node );
+				continue;
+			}
+
+			if ( $this->hasLinkAncestor( $node ) ) {
+				$node->resolvedTitle = $title;
+				$node->replaceWith( new Text( $this->nestedLinkText( $node, $title ) ) );
+				continue;
+			}
+
+			if ( $this->isEmbeddableFile( $title, $node ) ) {
+				$embed = FileEmbed::fromTitleAndParams( $title, $node->label );
+				$files[] = $embed;
+				$node->replaceWith( new FileEmbedNode( $embed ) );
+				continue;
+			}
+
+			$node->resolvedTitle = $title;
+
+			if ( !$title->isSamePageAnchor() ) {
+				$links[] = $title;
+			}
+		}
+
+		return [ $links, $categories, $files ];
+	}
+
+	private function isEmbeddableFile( WikiTitle $title, WikiLinkNode $node ): bool {
+		return $title->isFile() && !$title->isInterwiki() && !$node->hasLeadingColon;
+	}
+
+	/**
+	 * Wikilinks nested inside a markdown link cannot render as anchors, so they
+	 * degrade to plain text here, before registration: the link tables must not
+	 * record links or embeds the rendered page does not contain.
+	 */
+	private function hasLinkAncestor( Node $node ): bool {
+		for ( $ancestor = $node->parent(); $ancestor !== null; $ancestor = $ancestor->parent() ) {
+			if ( $ancestor instanceof Link ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function nestedLinkText( WikiLinkNode $node, WikiTitle $title ): string {
+		if ( $this->isEmbeddableFile( $title, $node ) ) {
+			return FileEmbed::fromTitleAndParams( $title, $node->label )->plainTextLabel();
+		}
+
+		return $node->displayLabel();
+	}
+
+	/**
+	 * Detaches the category node, then removes enclosing blocks the removal
+	 * emptied, so category assignments leave no blank markup behind. Table
+	 * cells stay: removing one would shift the row's columns, so an emptied
+	 * cell renders empty, as in wikitext.
+	 */
+	private function removeCategoryNode( WikiLinkNode $node ): void {
+		$container = $node->parent();
+		$node->detach();
+
+		while (
+			$container instanceof AbstractBlock
+			&& $this->isRemovableWhenBlank( $container )
+			&& $this->isBlank( $container )
+		) {
+			/** @var Node|null $parent */
+			$parent = $container->parent();
+			$container->detach();
+			$container = $parent;
+		}
+	}
+
+	private function isRemovableWhenBlank( AbstractBlock $container ): bool {
+		return !$container instanceof Document && !$container instanceof TableCell;
+	}
+
+	private function isBlank( Node $container ): bool {
+		foreach ( $container->children() as $child ) {
+			if ( !$this->isBlankInline( $child ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private function isBlankInline( Node $node ): bool {
+		return $node instanceof Newline
+			|| ( $node instanceof Text && trim( $node->getLiteral() ) === '' );
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function collectExternalLinks( Document $document ): array {
+		$urls = [];
+
+		foreach ( $this->nodesOfType( $document, Link::class ) as $link ) {
+			if ( ExternalLinkRenderer::isExternalUrl( $link->getUrl() ) ) {
+				$urls[] = $link->getUrl();
+			}
+		}
+
+		return $urls;
+	}
+
+	/**
+	 * @return Section[]
+	 */
+	private function processHeadings( Document $document ): array {
+		$anchorBuilder = new HeadingAnchorBuilder();
+		$sections = [];
+
+		foreach ( $this->nodesOfType( $document, Heading::class ) as $heading ) {
+			$text = $this->plainText( $heading );
+			$anchor = $anchorBuilder->buildAnchor( $text );
+
+			if ( $anchor !== '' ) {
+				$heading->data->set( 'attributes/id', $anchor );
+			}
+
+			$sections[] = new Section( $heading->getLevel(), $text, $anchor );
+		}
+
+		return $sections;
+	}
+
+	/**
+	 * Heading text for anchors and the ToC. Stricter than nodeSearchText():
+	 * raw HTML and file embeds contribute nothing, matching how core builds
+	 * heading ids. A new inline node type needs an arm in both methods.
+	 */
+	private function plainText( Node $node ): string {
+		$text = '';
+
+		foreach ( $node->iterator() as $child ) {
+			$text .= match ( true ) {
+				$child instanceof WikiLinkNode => $child->displayLabel(),
+				$child instanceof FileEmbedNode => '',
+				$child instanceof RawMarkupContainerInterface => '',
+				$child instanceof StringContainerInterface => $child->getLiteral(),
+				$child instanceof Newline => ' ',
+				default => ''
+			};
+		}
+
+		return $text;
+	}
+
+	/**
+	 * @template T of Node
+	 * @param class-string<T> $class
+	 * @return T[]
+	 */
+	private function nodesOfType( Document $document, string $class ): array {
+		$nodes = [];
+
+		foreach ( $document->iterator() as $node ) {
+			if ( $node instanceof $class ) {
+				$nodes[] = $node;
+			}
+		}
+
+		return $nodes;
+	}
+
+}

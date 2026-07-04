@@ -1,0 +1,10 @@
+{
+	"@metadata": {
+		"authors": [
+			"Jeroen De Dauw",
+			"Professional Wiki"
+		]
+	},
+	"nativemarkdown-description": "{{desc|name=NativeMarkdown|url=https://github.com/ProfessionalWiki/NativeMarkdown}}",
+	"content-model-markdown": "Name of the markdown content model, as shown on Special:ChangeContentModel and in page information. See also {{msg-mw|content-model-wikitext}}."
+}

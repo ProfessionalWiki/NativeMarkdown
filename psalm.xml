@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<psalm
+	errorLevel="1"
+	resolveFromConfigFile="true"
+	findUnusedCode="false"
+	findUnusedBaselineEntry="false"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="https://getpsalm.org/schema/config"
+	xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+	<projectFiles>
+		<directory name="src" />
+	</projectFiles>
+	<extraFiles>
+		<directory name="../../includes" />
+		<directory name="../../vendor/wikimedia" />
+		<directory name="../../vendor/league" />
+	</extraFiles>
+	<issueHandlers>
+		<MissingPropertyType errorLevel="suppress" />
+		<MissingClosureReturnType errorLevel="suppress" />
+		<!-- #[\Override] is PHP 8.3+; this extension supports PHP 8.1. -->
+		<MissingOverrideAttribute errorLevel="suppress" />
+		<!-- Integration necessarily calls MediaWiki methods marked @internal (TOCData, SectionMetadata). -->
+		<InternalMethod errorLevel="suppress" />
+		<!-- MediaWiki core is scanned for types only; its own loose-typing issues are not ours to fix. -->
+		<MissingParamType>
+			<errorLevel type="suppress">
+				<directory name="../../includes" />
+			</errorLevel>
+		</MissingParamType>
+		<UndefinedConstant>
+			<errorLevel type="suppress">
+				<directory name="../../includes" />
+			</errorLevel>
+		</UndefinedConstant>
+		<UndefinedFunction>
+			<errorLevel type="suppress">
+				<directory name="../../includes" />
+			</errorLevel>
+		</UndefinedFunction>
+		<MixedArgument>
+			<errorLevel type="suppress">
+				<directory name="../../includes" />
+			</errorLevel>
+		</MixedArgument>
+	</issueHandlers>
+</psalm>

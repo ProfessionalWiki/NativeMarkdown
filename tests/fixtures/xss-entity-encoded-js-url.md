@@ -1,0 +1,1 @@
+[sneaky](javascript&#58;alert(1))

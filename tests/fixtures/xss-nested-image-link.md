@@ -1,0 +1,1 @@
+[![logo](https://example.com/l.png)](javascript:alert(1))
