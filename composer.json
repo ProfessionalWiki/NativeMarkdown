@@ -1,0 +1,67 @@
+{
+	"name": "professional-wiki/native-markdown",
+	"type": "mediawiki-extension",
+	"description": "MediaWiki extension that makes Markdown a native content model with first-class wiki integration",
+	"keywords": [
+		"MediaWiki",
+		"Markdown",
+		"CommonMark",
+		"GitHub Flavored Markdown",
+		"content model",
+		"wiki"
+	],
+	"homepage": "https://github.com/ProfessionalWiki/NativeMarkdown",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "Professional Wiki",
+			"email": "info@professional.wiki",
+			"homepage": "https://professional.wiki",
+			"role": "Creator"
+		},
+		{
+			"name": "Jeroen De Dauw",
+			"email": "jeroendedauw@proton.me",
+			"homepage": "https://EntropyWins.wtf",
+			"role": "Creator and lead developer"
+		}
+	],
+	"support": {
+		"issues": "https://github.com/ProfessionalWiki/NativeMarkdown/issues",
+		"source": "https://github.com/ProfessionalWiki/NativeMarkdown"
+	},
+	"require": {
+		"php": ">=8.1",
+		"composer/installers": "^2|^1.0.1",
+		"league/commonmark": "^2.7",
+		"symfony/yaml": "^5.4 || ^6.4 || ^7.0"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^9.6",
+		"vimeo/psalm": "^6.0",
+		"phpstan/phpstan": "^2.1",
+		"mediawiki/mediawiki-codesniffer": "^47.0"
+	},
+	"scripts": {
+		"test": "phpunit --testsuite Unit",
+		"cs": "phpcs -p -s",
+		"phpstan": "phpstan analyse --no-progress",
+		"psalm": "psalm"
+	},
+	"autoload": {
+		"psr-4": {
+			"ProfessionalWiki\\NativeMarkdown\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"ProfessionalWiki\\NativeMarkdown\\Tests\\": "tests/phpunit/"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true,
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	}
+}

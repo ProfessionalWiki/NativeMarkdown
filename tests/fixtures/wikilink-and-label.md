@@ -1,0 +1,1 @@
+See [[Some Page]] and [[Other Page|a label]] for details.

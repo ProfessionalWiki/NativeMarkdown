@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="vendor/autoload.php"
+	colors="true"
+	beStrictAboutOutputDuringTests="true"
+	failOnRisky="true"
+	failOnWarning="true"
+>
+	<testsuites>
+		<!-- Pure pipeline. Runs standalone with no MediaWiki: composer install, then vendor/bin/phpunit. -->
+		<testsuite name="Unit">
+			<directory>tests/phpunit/Application</directory>
+			<exclude>tests/phpunit/Application/HeadingAnchorParityTest.php</exclude>
+		</testsuite>
+		<!-- Needs MediaWiki. Run through core's tests/phpunit/phpunit.php. -->
+		<testsuite name="Integration">
+			<directory>tests/phpunit/EntryPoints</directory>
+			<file>tests/phpunit/Application/HeadingAnchorParityTest.php</file>
+		</testsuite>
+	</testsuites>
+	<coverage>
+		<include>
+			<directory suffix=".php">src</directory>
+		</include>
+	</coverage>
+</phpunit>

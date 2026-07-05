@@ -1,0 +1,10 @@
+{
+	"@metadata": {
+		"authors": [
+			"Jeroen De Dauw",
+			"Professional Wiki"
+		]
+	},
+	"nativemarkdown-description": "Makes Markdown a native content model with first-class wiki integration: internal links, categories, table of contents and search",
+	"content-model-markdown": "Markdown"
+}

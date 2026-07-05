@@ -1,0 +1,1 @@
+[[File:Cat.png|alt=<script>bad</script>|A <b>caption</b>]]
