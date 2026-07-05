@@ -24,16 +24,12 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 		$repoGroup = $this->createStub( RepoGroup::class );
 		$repoGroup->method( 'findFile' )->willReturn( $file );
 
-		$renderer = new MediaWikiFileEmbedRenderer(
-			repoGroup: $repoGroup,
-			linkRenderer: $this->getServiceContainer()->getLinkRenderer()
-		);
-
-		return $renderer->renderEmbed( new FileEmbed(
-			title: new WikiTitle( namespace: NS_FILE, dbKey: 'Chart.png', prefixedText: 'File:Chart.png' ),
+		return $this->newRendererWithRepoGroup( $repoGroup )->renderEmbed( new FileEmbed(
+			title: $this->chartTitle(),
 			width: $width,
 			altText: 'A chart',
-			caption: null
+			caption: null,
+			thumbnail: false
 		) );
 	}
 
@@ -57,6 +53,48 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 
 		$this->assertStringContainsString( 'srcset', $html );
 		$this->assertStringContainsString( '450px-Chart.png', $html );
+	}
+
+	public function testThumbnailRendersFramedFigureWithVisibleCaption(): void {
+		$html = $this->renderThumbnail( $this->newFileRenderingThumbnails(), caption: 'Quarterly revenue' );
+
+		$this->assertStringContainsString( 'typeof="mw:File/Thumb"', $html );
+		$this->assertStringContainsString( '<figcaption>Quarterly revenue</figcaption>', $html );
+	}
+
+	public function testThumbnailCaptionIsHtmlEscaped(): void {
+		$html = $this->renderThumbnail( $this->newFileRenderingThumbnails(), caption: '<script>alert(1)</script>' );
+
+		$this->assertStringNotContainsString( '<script>', $html );
+		$this->assertStringContainsString( '&lt;script&gt;', $html );
+	}
+
+	public function testThumbnailWithoutExplicitWidthUsesConfiguredDefault(): void {
+		$html = $this->renderThumbnail( $this->newFileRenderingThumbnails(), defaultThumbnailWidth: 250 );
+
+		$this->assertStringContainsString( '250px-Chart.png', $html );
+	}
+
+	public function testThumbnailUsesExplicitWidthOverConfiguredDefault(): void {
+		$html = $this->renderThumbnail(
+			$this->newFileRenderingThumbnails(),
+			width: 120,
+			defaultThumbnailWidth: 250
+		);
+
+		$this->assertStringContainsString( '120px-Chart.png', $html );
+		$this->assertStringNotContainsString( '250px-Chart.png', $html );
+	}
+
+	public function testThumbnailUsesExplicitAltTextForImageWhileShowingCaption(): void {
+		$html = $this->renderThumbnail(
+			$this->newFileRenderingThumbnails(),
+			altText: 'Bar chart of revenue',
+			caption: 'Quarterly revenue'
+		);
+
+		$this->assertStringContainsString( 'alt="Bar chart of revenue"', $html );
+		$this->assertStringContainsString( '<figcaption>Quarterly revenue</figcaption>', $html );
 	}
 
 	public function testPreloadedFileRendersWithoutPerEmbedLookup(): void {
@@ -85,10 +123,14 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( 'Special:Upload', $renderer->renderEmbed( $this->chartEmbed() ) );
 	}
 
-	private function newRendererWithRepoGroup( RepoGroup $repoGroup ): MediaWikiFileEmbedRenderer {
+	private function newRendererWithRepoGroup(
+		RepoGroup $repoGroup,
+		int $defaultThumbnailWidth = 300
+	): MediaWikiFileEmbedRenderer {
 		return new MediaWikiFileEmbedRenderer(
 			repoGroup: $repoGroup,
-			linkRenderer: $this->getServiceContainer()->getLinkRenderer()
+			linkRenderer: $this->getServiceContainer()->getLinkRenderer(),
+			defaultThumbnailWidth: $defaultThumbnailWidth
 		);
 	}
 
@@ -97,7 +139,34 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 	}
 
 	private function chartEmbed(): FileEmbed {
-		return new FileEmbed( title: $this->chartTitle(), width: 300, altText: 'A chart', caption: null );
+		return new FileEmbed(
+			title: $this->chartTitle(),
+			width: 300,
+			altText: 'A chart',
+			caption: null,
+			thumbnail: false
+		);
+	}
+
+	private function renderThumbnail(
+		File $file,
+		?int $width = null,
+		?string $altText = null,
+		?string $caption = null,
+		int $defaultThumbnailWidth = 300
+	): string {
+		$repoGroup = $this->createStub( RepoGroup::class );
+		$repoGroup->method( 'findFile' )->willReturn( $file );
+
+		return $this->newRendererWithRepoGroup( $repoGroup, $defaultThumbnailWidth )->renderEmbed(
+			new FileEmbed(
+				title: $this->chartTitle(),
+				width: $width,
+				altText: $altText,
+				caption: $caption,
+				thumbnail: true
+			)
+		);
 	}
 
 	private function newFileWithFailingTransform(): File {
