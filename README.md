@@ -1,4 +1,4 @@
-# NativeMarkdown
+# Native Markdown
 
 <!-- Badges (activate at publish, when the repo is public and the package is on Packagist):
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ProfessionalWiki/NativeMarkdown/ci.yml?branch=master)](https://github.com/ProfessionalWiki/NativeMarkdown/actions?query=workflow%3ACI)
@@ -11,14 +11,14 @@
 -->
 
 [MediaWiki] extension that makes Markdown a **native content model**: whole pages are stored and edited as
-Markdown and rendered with first-class wiki integration — internal links, categories, table of contents and
-search — coexisting with wikitext pages on the same wiki.
+Markdown and rendered with real wiki integration (internal links, categories, table of contents and search),
+coexisting with wikitext pages on the same wiki.
 
 Because pages are stored as plain Markdown, they are directly consumable and writable by LLMs and agents:
 `action=raw` returns clean Markdown, no wikitext conversion needed.
 See [For AI agents and LLMs](#for-ai-agents-and-llms).
 
-NativeMarkdown has been created and is maintained by [Professional Wiki].
+Native Markdown has been created and is maintained by [Professional Wiki].
 
 **Status: pre-release.** Configuration and behavior can still change.
 
@@ -33,7 +33,7 @@ NativeMarkdown has been created and is maintained by [Professional Wiki].
 ## Usage
 
 A Markdown page renders as a normal wiki page: MediaWiki table of contents, blue and red internal links,
-category assignment, working search — while `action=raw` returns the Markdown source.
+category assignment and working search, while `action=raw` returns the Markdown source.
 
 <img
   src="docs/screenshots/rendered-page-with-toc.png"
@@ -66,7 +66,7 @@ For readers coming from wikitext:
 | `{\| class="wikitable" ...` | GFM tables (`\| a \| b \|`), styled as wikitable automatically |
 | `<syntaxhighlight lang="php">` | fenced code block: <code>```php</code> |
 | `<ref>Source</ref>` | footnote: `[^1]` plus `[^1]: Source` |
-| `[[Page]]`, `[[Category:X]]`, `[[File:X.png]]` | identical — see below |
+| `[[Page]]`, `[[Category:X]]`, `[[File:X.png]]` | identical (see below) |
 | `{{Template}}`, parser functions, magic words | not available (rendered as literal text) |
 
 MediaWiki already renders the page title as the top-level heading, so starting a page with a `# Heading` is
@@ -104,7 +104,7 @@ markers is hidden from output and stored as page metadata.
 ### Page behavior notes
 
 - **Search** indexes the rendered prose of Markdown pages, not the raw markup, so snippets are clean. The
-  index updates through the job queue when a page is edited: pages saved before NativeMarkdown was installed
+  index updates through the job queue when a page is edited: pages saved before Native Markdown was installed
   or upgraded keep their previously indexed text until their next edit or a search index rebuild.
 - **Moves:** Markdown pages do not support redirects, so moving one does not leave a redirect behind at the
   old title. Inbound links need updating manually, as with any redirect-less content model.
@@ -161,7 +161,7 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | Setting | Default | Effect |
 |---|---|---|
 | `$wgNativeMarkdownNamespaces` | `[]` | Namespace IDs in which new pages default to Markdown, e.g. `[ NS_HELP ]` |
-| `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown — the "Markdown wiki" mode (see exclusions below) |
+| `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below) |
 | `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, in every namespace |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
 
@@ -174,8 +174,8 @@ by core's `$wgMaxArticleSize`.
 
 ## For AI agents and LLMs
 
-Markdown is the native read/write format of today's language models, and NativeMarkdown stores pages as
-exactly that — plain Markdown, no wikitext wrapper. That makes a Markdown page directly consumable and
+Markdown is the native read/write format of today's language models, and Native Markdown stores pages as
+exactly that: plain Markdown, no wikitext wrapper. That makes a Markdown page directly consumable and
 directly writable by an agent, with no lossy conversion step in either direction:
 
 - **Read the source** with `action=raw`:
@@ -184,7 +184,7 @@ directly writable by an agent, with no lossy conversion step in either direction
   GET /index.php?title=Release_Notes.md&action=raw
   ```
 
-  returns the raw Markdown, front matter and all — the same bytes an author typed.
+  returns the raw Markdown, front matter and all, exactly the bytes an author typed.
 
 - **Read via the REST API**, which also reports the model:
 
@@ -197,7 +197,7 @@ directly writable by an agent, with no lossy conversion step in either direction
   an agent wants the resolved links and table of contents rather than the source.
 
 - **Write** through the ordinary editing APIs (`action=edit`, the REST update endpoint) or, more
-  conveniently, through the [MediaWiki MCP Server] — an agent hands over Markdown and it is stored verbatim,
+  conveniently, through the [MediaWiki MCP Server]: an agent hands over Markdown and it is stored verbatim,
   rendered with full wiki integration on read.
 
 Because the round trip is lossless, an agent can fetch a page as Markdown, edit it, and write it back without
@@ -206,17 +206,17 @@ markup), so an agent's keyword lookups match what a reader sees rather than `#` 
 
 ## Comparison with other Markdown extensions
 
-NativeMarkdown exists because no maintained extension makes Markdown a first-class content model:
+Native Markdown exists because no maintained extension makes Markdown a native content model:
 
 - **[Extension:WikiMarkdown]** embeds Markdown blocks inside wikitext pages via a tag, plus a shallow `.md`
   content handler on top of Parsedown. Inside the Markdown there are no working `[[wiki links]]`, no category
-  assignment and no MediaWiki table of contents. NativeMarkdown makes the whole page Markdown, with links,
+  assignment and no MediaWiki table of contents. Native Markdown makes the whole page Markdown, with links,
   categories, ToC, search and link tables behaving like they do on wikitext pages.
 - **[Extension:Markdown]** is archived and points visitors to WikiMarkdown.
 - **[MarkdownExtraParser]** has been unmaintained for over a decade.
 
 Related but different: our [ExternalContent extension] embeds Markdown *files from external sources* (like
-GitHub) into wikitext pages, while NativeMarkdown is for the wiki's own pages being Markdown. They compose
+GitHub) into wikitext pages, while Native Markdown is for the wiki's own pages being Markdown. They compose
 nicely.
 
 ## Development
@@ -239,7 +239,7 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ## Release notes
 
-### Version 1.0.0 — not yet released
+### Version 1.0.0 (not yet released)
 
 Initial release for MediaWiki 1.43+ with these features:
 
@@ -250,7 +250,7 @@ Initial release for MediaWiki 1.43+ with these features:
 * YAML front matter parsed, hidden from output and stored as page metadata
 * Per-page model switching via `Special:ChangeContentModel`, namespace/suffix/wiki-wide activation modes
 * XSS-safe by construction: raw HTML escaped, unsafe links blocked, external images off by default
-* `action=raw` / REST return the stored Markdown byte for byte — built for AI agents and git round-trips
+* `action=raw` / REST return the stored Markdown byte for byte, built for AI agents and git round-trips
 * CodeEditor syntax highlighting on Markdown pages
 
 [MediaWiki]: https://www.mediawiki.org
