@@ -1,6 +1,5 @@
 # Native Markdown
 
-<!-- Badges (activate at publish, when the repo is public and the package is on Packagist):
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ProfessionalWiki/NativeMarkdown/ci.yml?branch=master)](https://github.com/ProfessionalWiki/NativeMarkdown/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/ProfessionalWiki/NativeMarkdown/branch/master/graph/badge.svg)](https://codecov.io/gh/ProfessionalWiki/NativeMarkdown)
 [![Type Coverage](https://shepherd.dev/github/ProfessionalWiki/NativeMarkdown/coverage.svg)](https://shepherd.dev/github/ProfessionalWiki/NativeMarkdown)
@@ -8,7 +7,6 @@
 [![Latest Stable Version](https://poser.pugx.org/professional-wiki/native-markdown/v/stable)](https://packagist.org/packages/professional-wiki/native-markdown)
 [![Download count](https://poser.pugx.org/professional-wiki/native-markdown/downloads)](https://packagist.org/packages/professional-wiki/native-markdown)
 [![License](https://poser.pugx.org/professional-wiki/native-markdown/license)](LICENSE)
--->
 
 [MediaWiki] extension that makes Markdown a **native content model**: whole pages are stored and edited as
 Markdown and rendered with real wiki integration (internal links, categories, table of contents and search),
@@ -18,17 +16,19 @@ Because pages are stored as plain Markdown, they are directly consumable and wri
 `action=raw` returns clean Markdown, no wikitext conversion needed.
 See [For AI agents and LLMs](#for-ai-agents-and-llms).
 
-Native Markdown has been created and is maintained by [Professional Wiki].
-
 **Status: pre-release.** Configuration and behavior can still change.
 
-- [Usage](#usage)
+- [Introduction to the extension](https://professional.wiki/en/extension/native-markdown#Overview)
+- [Usage documentation](https://professional.wiki/en/extension/native-markdown#Usage)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [For AI agents and LLMs](#for-ai-agents-and-llms)
 - [Comparison with other Markdown extensions](#comparison-with-other-markdown-extensions)
 - [Development](#development)
 - [Release notes](#release-notes)
+
+Get professional support for this extension via [Professional Wiki], its creators and maintainers.
+We provide [MediaWiki Development], [MediaWiki Hosting], and [MediaWiki Consulting] services.
 
 ## Usage
 
@@ -50,80 +50,8 @@ highlighting; Show preview renders through the full pipeline:
   alt="The wiki edit form with Markdown syntax highlighting"
 />
 
-### Markdown syntax
-
-Pages use [CommonMark] plus GitHub Flavored Markdown: tables, strikethrough, task lists and autolinks, with
-footnotes (`[^1]`) also enabled. Raw HTML is always escaped, which makes output XSS-safe by construction.
-
-For readers coming from wikitext:
-
-| Wikitext | Markdown |
-|---|---|
-| `'''bold'''`, `''italic''` | `**bold**`, `*italic*` |
-| `== Heading ==` | `## Heading` |
-| `* bullet` / `# numbered` | `- bullet` / `1. numbered` |
-| `[https://example.org label]` | `[label](https://example.org)` |
-| `{\| class="wikitable" ...` | GFM tables (`\| a \| b \|`), styled as wikitable automatically |
-| `<syntaxhighlight lang="php">` | fenced code block: <code>```php</code> |
-| `<ref>Source</ref>` | footnote: `[^1]` plus `[^1]: Source` |
-| `[[Page]]`, `[[Category:X]]`, `[[File:X.png]]` | identical (see below) |
-| `{{Template}}`, parser functions, magic words | not available (rendered as literal text) |
-
-MediaWiki already renders the page title as the top-level heading, so starting a page with a `# Heading` is
-optional; when present it simply becomes the first entry of the table of contents.
-
-### Wiki links in Markdown
-
-Wikitext's link syntax works inside Markdown, with the same semantics:
-
-| Syntax | Effect |
-|---|---|
-| `[[Page]]`, `[[Namespace:Page]]` | Internal link, blue or red by page existence, tracked in `Special:WhatLinksHere` |
-| `[[Page\|label]]` | Internal link with label |
-| `[[Page#Section]]`, `[[#Section]]` | Link to a section of another page or of the current page |
-| `[[Category:X]]` | Assigns the category and renders nothing, like wikitext |
-| `[[Category:X\|sort key]]` | Assigns with a sort key |
-| `[[:Category:X]]` | Visible link to the category page |
-| `[[File:X.png]]` | Embeds the file at full size; missing files render as an upload link |
-| `[[File:X.png\|300px\|alt=Alt text\|Caption]]` | Embed with width, alt text and caption (tooltip); each parameter is optional |
-| `[[:File:X.png]]` | Link to the file page instead of embedding |
-| `[[wikipedia:Page]]` | Interwiki link, using the wiki's interwiki table |
-
-Anything in `[[...]]` that is not a valid title renders as literal text. YAML front matter between `---`
-markers is hidden from output and stored as page metadata.
-
-### Differences from wikitext link behavior
-
-- Inside GFM table cells, `|` separates columns before links are parsed, so write `[[Page\|label]]` with a
-  backslash escape: `| [[Page\|label]] |`.
-- Height-only image sizes (`x100px`) are ignored; only the width of `100px` / `100x200px` is used.
-- `[[Media:X]]` links land on the file description page rather than the raw file.
-- Relative subpage links (`[[/sub]]`) are not resolved; the text is treated as a literal page title.
-- `[[Special:...]]` links render but are not recorded in `Special:WhatLinksHere`, as in wikitext.
-
-### Page behavior notes
-
-- **Search** indexes the rendered prose of Markdown pages, not the raw markup, so snippets are clean. The
-  index updates through the job queue when a page is edited: pages saved before Native Markdown was installed
-  or upgraded keep their previously indexed text until their next edit or a search index rebuild.
-- **Moves:** Markdown pages do not support redirects, so moving one does not leave a redirect behind at the
-  old title. Inbound links need updating manually, as with any redirect-less content model.
-- **Diffs, history, undo and rollback** work as they do for wikitext pages: the stored Markdown is compared
-  and reverted line by line.
-- **Edit conflicts** are merged three-way at the Markdown-source level; genuinely conflicting edits surface
-  the normal conflict screen.
-
-### Explicit non-goals in v1
-
-Templates and transclusion (`{{...}}` stays literal text), parser functions and magic words, wikitext
-islands, VisualEditor support, section editing, redirects on Markdown pages, and mapping front matter to
-structured data.
-
-### Roadmap (post-v1 candidates)
-
-Transclusion; front matter mapped to structured data (Semantic MediaWiki); live side-by-side preview and
-WYSIWYG editing; Obsidian-vault and git-repository import tooling (export is already free via `action=raw`);
-opt-in template expansion.
+See the [full usage documentation](https://professional.wiki/en/extension/native-markdown#Usage) for the
+Markdown syntax, wiki-link reference, and page behavior notes.
 
 ## Installation
 
@@ -254,12 +182,14 @@ Initial release for MediaWiki 1.43+ with these features:
 * CodeEditor syntax highlighting on Markdown pages
 
 [MediaWiki]: https://www.mediawiki.org
-[Professional Wiki]: https://professional.wiki/en/mediawiki-development
+[Professional Wiki]: https://professional.wiki
+[MediaWiki Development]: https://professional.wiki/en/mediawiki-development
+[MediaWiki Hosting]: https://pro.wiki
+[MediaWiki Consulting]: https://professional.wiki/en/mediawiki-consulting-services
 [PHP]: https://www.php.net
 [Composer]: https://getcomposer.org
 [Composer install]: https://professional.wiki/en/articles/installing-mediawiki-extensions-with-composer
 [LocalSettings.php]: https://www.mediawiki.org/wiki/Manual:LocalSettings.php
-[CommonMark]: https://commonmark.org
 [CodeEditor extension]: https://www.mediawiki.org/wiki/Extension:CodeEditor
 [MediaWiki MCP Server]: https://github.com/ProfessionalWiki/MediaWiki-MCP-Server
 [Extension:WikiMarkdown]: https://www.mediawiki.org/wiki/Extension:WikiMarkdown

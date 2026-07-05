@@ -8,6 +8,7 @@ use MediaWiki\MediaWikiServices;
 use MediaWiki\Parser\Parser;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownDefaultPolicy;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\RedirectSyntax;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiPageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTitleParser;
@@ -79,6 +80,15 @@ final class NativeMarkdownExtension {
 		$defaultThumbSize = (int)$services->getUserOptionsLookup()->getDefaultOption( 'thumbsize' );
 
 		return (int)( $thumbLimits[$defaultThumbSize] ?? 300 );
+	}
+
+	public function newRedirectSyntax(): RedirectSyntax {
+		return new RedirectSyntax(
+			magicWordSynonyms: MediaWikiServices::getInstance()
+				->getMagicWordFactory()
+				->get( 'redirect' )
+				->getSynonyms()
+		);
 	}
 
 	public function newMarkdownDefaultPolicy(): MarkdownDefaultPolicy {

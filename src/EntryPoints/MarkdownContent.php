@@ -5,6 +5,7 @@ declare( strict_types = 1 );
 namespace ProfessionalWiki\NativeMarkdown\EntryPoints;
 
 use MediaWiki\Content\TextContent;
+use MediaWiki\Title\Title;
 use ProfessionalWiki\NativeMarkdown\NativeMarkdownExtension;
 
 /**
@@ -17,6 +18,19 @@ final class MarkdownContent extends TextContent {
 
 	public function __construct( string $text ) {
 		parent::__construct( $text, NativeMarkdownExtension::CONTENT_MODEL );
+	}
+
+	/**
+	 * Redirect resolution lives on the handler, which has the services to turn
+	 * the redirect syntax into a validated title. This drives redirect detection
+	 * for the whole wiki: page moves, WhatLinksHere and the redirect table.
+	 */
+	public function getRedirectTarget(): ?Title {
+		$handler = $this->getContentHandler();
+
+		return $handler instanceof MarkdownContentHandler
+			? $handler->getRedirectTargetForContent( $this )
+			: null;
 	}
 
 	/**
