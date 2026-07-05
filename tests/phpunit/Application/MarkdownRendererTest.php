@@ -19,6 +19,7 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
 /**
  * @covers \ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\RenderedMarkdown
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\FileEmbed
  * @covers \ProfessionalWiki\NativeMarkdown\Application\HeadingAnchorBuilder
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkParser
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNode
@@ -359,6 +360,45 @@ class MarkdownRendererTest extends TestCase {
 			'second',
 			$this->render( '[[File:Cat.png|first|second]]' )->files[0]->caption
 		);
+	}
+
+	public function testFileEmbedIsInlineByDefault(): void {
+		$this->assertFalse(
+			$this->render( '[[File:Cat.png|300px|A caption]]' )->files[0]->thumbnail
+		);
+	}
+
+	public function testFileEmbedThumbKeywordRequestsThumbnail(): void {
+		$this->assertTrue(
+			$this->render( '[[File:Cat.png|thumb]]' )->files[0]->thumbnail
+		);
+	}
+
+	public function testFileEmbedThumbnailKeywordRequestsThumbnail(): void {
+		$this->assertTrue(
+			$this->render( '[[File:Cat.png|thumbnail]]' )->files[0]->thumbnail
+		);
+	}
+
+	public function testFileEmbedThumbKeywordIsCaseInsensitive(): void {
+		$this->assertTrue(
+			$this->render( '[[File:Cat.png|Thumb]]' )->files[0]->thumbnail
+		);
+	}
+
+	public function testFileEmbedThumbKeywordIsNotTreatedAsCaption(): void {
+		$this->assertNull(
+			$this->render( '[[File:Cat.png|thumb]]' )->files[0]->caption
+		);
+	}
+
+	public function testFileEmbedCombinesThumbWithOtherParams(): void {
+		$embed = $this->render( '[[File:Cat.png|300px|thumb|alt=A cat|The caption]]' )->files[0];
+
+		$this->assertTrue( $embed->thumbnail );
+		$this->assertSame( 300, $embed->width );
+		$this->assertSame( 'A cat', $embed->altText );
+		$this->assertSame( 'The caption', $embed->caption );
 	}
 
 	public function testFileEmbedHeightOnlySizeIsIgnoredNotCaption(): void {

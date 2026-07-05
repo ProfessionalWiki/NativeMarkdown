@@ -15,9 +15,10 @@ use ProfessionalWiki\NativeMarkdown\Application\FileEmbedRenderer;
 use RepoGroup;
 
 /**
- * Renders embedded files the way wikitext renders inline (unframed) images:
- * a linked image for existing files, an upload red link for missing ones,
- * and a plain file page link for media that cannot display inline.
+ * Renders embedded files the way wikitext does: an inline (unframed) linked
+ * image by default, or a framed thumbnail with a visible caption when the embed
+ * requests `thumb`. Missing files become an upload red link, and media that
+ * cannot display inline becomes a plain file page link.
  */
 final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 
@@ -26,7 +27,8 @@ final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 
 	public function __construct(
 		private readonly RepoGroup $repoGroup,
-		private readonly LinkRenderer $linkRenderer
+		private readonly LinkRenderer $linkRenderer,
+		private readonly int $defaultThumbnailWidth
 	) {
 	}
 
@@ -56,7 +58,44 @@ final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 			return $this->linkRenderer->makeLink( $this->fileTitle( $embed ), $embed->caption );
 		}
 
+		if ( $embed->thumbnail ) {
+			return $this->thumbnailFrameHtml( $embed, $file );
+		}
+
 		return $this->embeddedImageHtml( $embed, $file );
+	}
+
+	/**
+	 * Delegates to core so the framed markup, magnify link and responsive
+	 * variants match a wikitext `|thumb` exactly. A width is always passed:
+	 * the requested one, or the wiki's default thumbnail size, since
+	 * makeThumbLink2 would otherwise fall back to a smaller built-in default.
+	 */
+	private function thumbnailFrameHtml( FileEmbed $embed, File $file ): string {
+		return Linker::makeThumbLink2(
+			$this->fileTitle( $embed ),
+			$file,
+			$this->thumbnailFrameParams( $embed ),
+			[ 'width' => $embed->width ?? $this->defaultThumbnailWidth ]
+		);
+	}
+
+	/**
+	 * The caption becomes the visible figcaption, which the thumbnail markup
+	 * emits as raw HTML, so it is escaped here. An explicit alt sets the image
+	 * alt; a thumbnail's caption is not reused as the alt, matching how wikitext
+	 * treats a visible caption.
+	 *
+	 * @return array<string, string>
+	 */
+	private function thumbnailFrameParams( FileEmbed $embed ): array {
+		$frameParams = [ 'caption' => htmlspecialchars( $embed->caption ?? '', ENT_QUOTES ) ];
+
+		if ( $embed->altText !== null ) {
+			$frameParams['alt'] = $embed->altText;
+		}
+
+		return $frameParams;
 	}
 
 	private function embeddedImageHtml( FileEmbed $embed, File $file ): string {

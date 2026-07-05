@@ -60,13 +60,26 @@ final class NativeMarkdownExtension {
 			),
 			fileEmbedRenderer: new MediaWikiFileEmbedRenderer(
 				$services->getRepoGroup(),
-				$services->getLinkRenderer()
+				$services->getLinkRenderer(),
+				$this->defaultThumbnailWidth( $services )
 			),
 			allowExternalImages: (bool)$services->getMainConfig()->get( 'NativeMarkdownAllowExternalImages' ),
 			maxNestingLevel: self::MAX_NESTING_LEVEL,
 			tocPlaceholderHtml: Parser::TOC_PLACEHOLDER,
 			noFollowExternalLinks: (bool)$services->getMainConfig()->get( 'NoFollowLinks' )
 		);
+	}
+
+	/**
+	 * The width a bare `thumb` embed renders at, mirroring how the wikitext
+	 * parser sizes a thumbnail: the default thumbnail preference indexed into
+	 * the configured thumbnail sizes.
+	 */
+	private function defaultThumbnailWidth( MediaWikiServices $services ): int {
+		$thumbLimits = (array)$services->getMainConfig()->get( 'ThumbLimits' );
+		$defaultThumbSize = (int)$services->getUserOptionsLookup()->getDefaultOption( 'thumbsize' );
+
+		return (int)( $thumbLimits[$defaultThumbSize] ?? 300 );
 	}
 
 	public function newRedirectSyntax(): RedirectSyntax {
