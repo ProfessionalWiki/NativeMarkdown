@@ -75,6 +75,8 @@ final class MarkdownContentHandler extends TextContentHandler {
 	 * rather than a redirect. Mirrors WikitextContentHandler.
 	 */
 	private function redirectTargetNeedsColon( Title $destination ): bool {
+		// NS_CATEGORY is a MediaWiki global constant psalm cannot resolve from scanned core files.
+		/** @psalm-suppress UndefinedConstant */
 		if ( $destination->getNamespace() === NS_CATEGORY ) {
 			return true;
 		}

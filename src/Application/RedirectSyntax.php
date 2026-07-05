@@ -78,6 +78,8 @@ final class RedirectSyntax {
 	 * The redirect magic word is always case-insensitive, so this matches any
 	 * synonym at the very start of the page. Longest synonyms come first, as in
 	 * MediaWiki's own magic word matching, so one is never a prefix of another.
+	 *
+	 * @return non-empty-string
 	 */
 	private function magicWordRegex(): string {
 		$synonyms = $this->magicWordSynonyms;
