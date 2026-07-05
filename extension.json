@@ -47,7 +47,7 @@
 		},
 		"NativeMarkdownEverywhere": {
 			"description": "If new pages should default to the markdown content model everywhere, except discussion, Template and MediaWiki namespaces and namespaces with an explicitly configured content model.",
-			"value": false
+			"value": true
 		},
 		"NativeMarkdownSuffixDetection": {
 			"description": "If new pages with a title ending in .md should default to the markdown content model.",

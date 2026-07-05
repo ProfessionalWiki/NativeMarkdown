@@ -47,7 +47,8 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 	}
 
 	public function testBatchedExistenceLookupKeepsBlueAndRedLinksApart(): void {
-		$this->getExistingTestPage( 'Batch Existing Page' );
+		// Only needs the target to exist; editPage works whatever the default model is.
+		$this->editPage( 'Batch Existing Page', 'It exists.' );
 
 		$output = $this->getParserOutput( 'Blue [[Batch Existing Page]] and red [[Batch Missing Page]]' );
 
