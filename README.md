@@ -1,6 +1,5 @@
 # Native Markdown
 
-<!-- Badges (activate at publish, when the repo is public and the package is on Packagist):
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ProfessionalWiki/NativeMarkdown/ci.yml?branch=master)](https://github.com/ProfessionalWiki/NativeMarkdown/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/ProfessionalWiki/NativeMarkdown/branch/master/graph/badge.svg)](https://codecov.io/gh/ProfessionalWiki/NativeMarkdown)
 [![Type Coverage](https://shepherd.dev/github/ProfessionalWiki/NativeMarkdown/coverage.svg)](https://shepherd.dev/github/ProfessionalWiki/NativeMarkdown)
@@ -8,7 +7,6 @@
 [![Latest Stable Version](https://poser.pugx.org/professional-wiki/native-markdown/v/stable)](https://packagist.org/packages/professional-wiki/native-markdown)
 [![Download count](https://poser.pugx.org/professional-wiki/native-markdown/downloads)](https://packagist.org/packages/professional-wiki/native-markdown)
 [![License](https://poser.pugx.org/professional-wiki/native-markdown/license)](LICENSE)
--->
 
 [MediaWiki] extension that makes Markdown a **native content model**: whole pages are stored and edited as
 Markdown and rendered with real wiki integration (internal links, categories, table of contents and search),
