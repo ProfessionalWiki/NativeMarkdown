@@ -161,13 +161,16 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | Setting | Default | Effect |
 |---|---|---|
 | `$wgNativeMarkdownNamespaces` | `[]` | Namespace IDs in which new pages default to Markdown, e.g. `[ NS_HELP ]` |
-| `$wgNativeMarkdownEverywhere` | `false` | New pages in all content namespaces default to Markdown |
+| `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown — the "Markdown wiki" mode (see exclusions below) |
 | `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, in every namespace |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
 
-Titles ending in `.css`, `.js` or `.json` never default to Markdown, since MediaWiki reserves those for code
-pages. External links honor the core `$wgNoFollowLinks` setting. Input size is bounded by core's
-`$wgMaxArticleSize`.
+`$wgNativeMarkdownEverywhere` covers the whole prose wiki, but deliberately leaves some pages as wikitext: the
+discussion (Talk) namespaces, where signatures and threading depend on wikitext; the Template and MediaWiki
+namespaces; and any namespace whose content model is explicitly configured elsewhere (for example a Scribunto
+or JSON namespace). Titles ending in `.css`, `.js` or `.json` never default to Markdown either, since MediaWiki
+reserves those for code pages. External links honor the core `$wgNoFollowLinks` setting. Input size is bounded
+by core's `$wgMaxArticleSize`.
 
 ## For AI agents and LLMs
 

@@ -46,7 +46,7 @@
 			"value": []
 		},
 		"NativeMarkdownEverywhere": {
-			"description": "If new pages in all content namespaces should default to the markdown content model.",
+			"description": "If new pages should default to the markdown content model everywhere, except discussion, Template and MediaWiki namespaces and namespaces with an explicitly configured content model.",
 			"value": false
 		},
 		"NativeMarkdownSuffixDetection": {
