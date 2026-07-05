@@ -17,12 +17,19 @@ final class NativeMarkdownHooks {
 	 * @return bool|void
 	 */
 	public static function onContentHandlerDefaultModelFor( Title $title, ?string &$model ) {
-		$namespaceIsContent = MediaWikiServices::getInstance()->getNamespaceInfo()
-			->isContent( $title->getNamespace() );
+		// Only fill in where MediaWiki would otherwise fall back to wikitext. A
+		// namespace with an explicitly configured model (Scribunto, JSON, ...) already
+		// has $model set here, and must be left untouched.
+		if ( $model !== null ) {
+			return;
+		}
+
+		$isTalkNamespace = MediaWikiServices::getInstance()->getNamespaceInfo()
+			->isTalk( $title->getNamespace() );
 
 		$applies = NativeMarkdownExtension::getInstance()->newMarkdownDefaultPolicy()->appliesTo(
 			$title->getNamespace(),
-			$namespaceIsContent,
+			$isTalkNamespace,
 			$title->getText(),
 			$title->exists()
 		);

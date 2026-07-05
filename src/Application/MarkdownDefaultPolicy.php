@@ -10,6 +10,10 @@ namespace ProfessionalWiki\NativeMarkdown\Application;
  */
 final class MarkdownDefaultPolicy {
 
+	// Fixed core namespace IDs (Defines.php), stable across all MediaWiki installs.
+	private const MEDIAWIKI_NAMESPACE = 8;
+	private const TEMPLATE_NAMESPACE = 10;
+
 	/**
 	 * @param int[] $namespaces
 	 */
@@ -24,14 +28,25 @@ final class MarkdownDefaultPolicy {
 	 * Defaults apply to page creation only: existing pages (including imports
 	 * and undeletions of pages that already have revisions) keep their model.
 	 */
-	public function appliesTo( int $namespace, bool $isContentNamespace, string $titleText, bool $pageExists ): bool {
+	public function appliesTo( int $namespace, bool $isTalkNamespace, string $titleText, bool $pageExists ): bool {
 		if ( $pageExists || $this->isCodePageTitle( $titleText ) ) {
 			return false;
 		}
 
 		return in_array( $namespace, $this->namespaces, true )
-			|| ( $this->everywhere && $isContentNamespace )
+			|| ( $this->everywhere && $this->isEverywhereNamespace( $namespace, $isTalkNamespace ) )
 			|| ( $this->suffixDetection && str_ends_with( $titleText, '.md' ) );
+	}
+
+	/**
+	 * The "everywhere" mode covers the whole prose wiki. Discussion namespaces stay
+	 * wikitext (signatures and threading depend on it), as do the Template and
+	 * MediaWiki namespaces (transclusion machinery and interface messages).
+	 */
+	private function isEverywhereNamespace( int $namespace, bool $isTalkNamespace ): bool {
+		return !$isTalkNamespace
+			&& $namespace !== self::TEMPLATE_NAMESPACE
+			&& $namespace !== self::MEDIAWIKI_NAMESPACE;
 	}
 
 	/**

@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 
 namespace ProfessionalWiki\NativeMarkdown\Tests\EntryPoints;
 
+use MediaWiki\MainConfigNames;
 use MediaWiki\Title\Title;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\NativeMarkdownHooks;
@@ -64,7 +65,7 @@ class NativeMarkdownHooksTest extends MediaWikiIntegrationTestCase {
 		$this->assertSame( CONTENT_MODEL_WIKITEXT, $title->getContentModel() );
 	}
 
-	public function testEverywhereDefaultsContentNamespacePagesToMarkdown(): void {
+	public function testEverywhereDefaultsMainNamespaceToMarkdown(): void {
 		$this->configureActivation( everywhere: true );
 
 		$this->assertSame(
@@ -73,17 +74,66 @@ class NativeMarkdownHooksTest extends MediaWikiIntegrationTestCase {
 		);
 	}
 
-	public function testEverywhereLeavesNonContentNamespacesAlone(): void {
+	public function testEverywhereDefaultsHelpNamespaceToMarkdown(): void {
+		$this->configureActivation( everywhere: true );
+
+		$this->assertSame(
+			'markdown',
+			Title::makeTitle( NS_HELP, 'Editing Guide' )->getContentModel()
+		);
+	}
+
+	public function testEverywhereDefaultsUserNamespaceToMarkdown(): void {
+		$this->configureActivation( everywhere: true );
+
+		$this->assertSame(
+			'markdown',
+			Title::makeTitle( NS_USER, 'Jeroen' )->getContentModel()
+		);
+	}
+
+	public function testEverywhereLeavesTalkNamespacesWikitext(): void {
 		$this->configureActivation( everywhere: true );
 
 		$this->assertSame(
 			CONTENT_MODEL_WIKITEXT,
-			Title::makeTitle( NS_HELP, 'Native Markdown Fresh Page' )->getContentModel()
+			Title::makeTitle( NS_TALK, 'An Article' )->getContentModel()
 		);
 	}
 
-	public function testUserScriptSubpageKeepsJavascriptModel(): void {
-		$this->configureActivation( namespaces: [ NS_USER ] );
+	public function testEverywhereLeavesTemplateNamespaceWikitext(): void {
+		$this->configureActivation( everywhere: true );
+
+		$this->assertSame(
+			CONTENT_MODEL_WIKITEXT,
+			Title::makeTitle( NS_TEMPLATE, 'Infobox' )->getContentModel()
+		);
+	}
+
+	public function testEverywhereLeavesMediaWikiNamespaceWikitext(): void {
+		$this->configureActivation( everywhere: true );
+
+		$this->assertSame(
+			CONTENT_MODEL_WIKITEXT,
+			Title::makeTitle( NS_MEDIAWIKI, 'Sidebar' )->getContentModel()
+		);
+	}
+
+	public function testEverywhereRespectsExplicitlyConfiguredNamespaceModel(): void {
+		$this->overrideConfigValue(
+			MainConfigNames::NamespaceContentModels,
+			[ NS_HELP => CONTENT_MODEL_JSON ]
+		);
+		$this->configureActivation( everywhere: true );
+
+		$this->assertSame(
+			CONTENT_MODEL_JSON,
+			Title::makeTitle( NS_HELP, 'Config Page' )->getContentModel()
+		);
+	}
+
+	public function testUserScriptSubpageKeepsJavascriptModelUnderEverywhere(): void {
+		$this->configureActivation( everywhere: true );
 
 		$this->assertSame(
 			CONTENT_MODEL_JAVASCRIPT,
