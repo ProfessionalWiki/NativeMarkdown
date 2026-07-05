@@ -77,8 +77,8 @@ class MarkdownEditingBehaviorTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( 'diff-addedline', $diff );
 	}
 
-	public function testMarkdownContentModelDoesNotSupportRedirects(): void {
-		$this->assertFalse( $this->handler()->supportsRedirects() );
+	public function testMarkdownContentModelSupportsRedirects(): void {
+		$this->assertTrue( $this->handler()->supportsRedirects() );
 	}
 
 }

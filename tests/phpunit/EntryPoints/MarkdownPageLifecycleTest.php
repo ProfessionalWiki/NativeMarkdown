@@ -9,8 +9,8 @@ use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContent;
 
 /**
- * Page-level lifecycle behavior for markdown pages: moving (with redirects
- * unsupported), deletion/undeletion and model preservation across them.
+ * Page-level lifecycle behavior for markdown pages: moving (leaving a working
+ * redirect at the old title), deletion/undeletion and model preservation.
  *
  * @covers \ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContentHandler
  * @covers \ProfessionalWiki\NativeMarkdown\EntryPoints\NativeMarkdownHooks
@@ -40,19 +40,22 @@ class MarkdownPageLifecycleTest extends MediaWikiIntegrationTestCase {
 		$this->assertSame( 'markdown', $this->contentModelOf( $target ) );
 	}
 
-	public function testMovingMarkdownPageLeavesNoRedirectAtOldTitle(): void {
+	public function testMovingMarkdownPageLeavesWorkingRedirectAtOldTitle(): void {
 		$source = Title::makeTitle( NS_MAIN, 'Markdown Redirect Source' );
 		$target = Title::makeTitle( NS_MAIN, 'Markdown Redirect Target' );
-		$this->createMarkdownPage( $source, "# No Redirect\n\nBody." );
+		$this->createMarkdownPage( $source, "# Original\n\nBody." );
 
-		// Ask for a redirect: the model cannot hold one, so none is created.
 		$this->getServiceContainer()->getMovePageFactory()
 			->newMovePage( $source, $target )
 			->move( $this->getTestSysop()->getUser(), 'moving', true );
 
-		$this->assertFalse(
-			$source->toPageIdentity()->exists(),
-			'A markdown page move must not leave a redirect stub behind.'
+		$stub = $this->getServiceContainer()->getWikiPageFactory()->newFromTitle( $source )->getContent();
+		$this->assertInstanceOf( MarkdownContent::class, $stub );
+
+		$this->assertSame(
+			$target->getPrefixedText(),
+			$stub->getRedirectTarget()?->getPrefixedText(),
+			'The move must leave a working markdown redirect at the old title.'
 		);
 	}
 
