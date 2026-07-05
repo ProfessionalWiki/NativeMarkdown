@@ -58,6 +58,9 @@
 			"ProfessionalWiki\\NativeMarkdown\\Tests\\": "tests/phpunit/"
 		}
 	},
+	"extra": {
+		"installer-name": "NativeMarkdown"
+	},
 	"config": {
 		"allow-plugins": {
 			"composer/installers": true,
