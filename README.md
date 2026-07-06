@@ -90,7 +90,7 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | Setting | Default | Effect |
 |---|---|---|
 | `$wgNativeMarkdownNamespaces` | `[]` | Namespace IDs in which new pages default to Markdown, e.g. `[ NS_HELP ]` |
-| `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below) |
+| `$wgNativeMarkdownEverywhere` | `true` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below); set to `false` to keep wikitext as the default |
 | `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, except in the Template and MediaWiki namespaces |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
 | `$wgNativeMarkdownWikitextExpansion` | `true` | Run `{{...}}` on Markdown pages through the MediaWiki parser: templates, parser functions, magic words, and Lua modules. Set to `false` to leave `{{...}}` as literal text (see [Templates and parser functions](#templates-and-parser-functions)) |
