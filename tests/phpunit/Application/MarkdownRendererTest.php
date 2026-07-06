@@ -9,8 +9,10 @@ use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\PageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\RenderedMarkdown;
 use ProfessionalWiki\NativeMarkdown\Application\Section;
+use ProfessionalWiki\NativeMarkdown\Application\TemplateExpander;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakePageLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeTemplateExpander;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeWikiTitleParser;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\RecordingPageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\SpyPageLinkRenderer;
@@ -28,13 +30,21 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\ExternalLinkRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholder
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholderRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallParser
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlockStartParser
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlockParser
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallNode
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlock
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\TemplateCall
  */
 class MarkdownRendererTest extends TestCase {
 
 	private function newRenderer(
 		bool $allowExternalImages = false,
 		?PageLinkRenderer $pageLinkRenderer = null,
-		?string $tocPlaceholderHtml = null
+		?string $tocPlaceholderHtml = null,
+		bool $templateTransclusion = false
 	): MarkdownRenderer {
 		return new MarkdownRenderer(
 			titleParser: new FakeWikiTitleParser(),
@@ -43,7 +53,8 @@ class MarkdownRendererTest extends TestCase {
 			allowExternalImages: $allowExternalImages,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: $tocPlaceholderHtml,
-			noFollowExternalLinks: true
+			noFollowExternalLinks: true,
+			templateTransclusion: $templateTransclusion
 		);
 	}
 
@@ -52,10 +63,12 @@ class MarkdownRendererTest extends TestCase {
 		bool $allowExternalImages = false,
 		?PageLinkRenderer $pageLinkRenderer = null,
 		bool $generateHtml = true,
-		?string $tocPlaceholderHtml = null
+		?string $tocPlaceholderHtml = null,
+		bool $templateTransclusion = false,
+		?TemplateExpander $templateExpander = null
 	): RenderedMarkdown {
-		return $this->newRenderer( $allowExternalImages, $pageLinkRenderer, $tocPlaceholderHtml )
-			->render( $markdown, $generateHtml );
+		return $this->newRenderer( $allowExternalImages, $pageLinkRenderer, $tocPlaceholderHtml, $templateTransclusion )
+			->render( $markdown, $generateHtml, $templateExpander );
 	}
 
 	private function extractPlainText( string $markdown ): string {
@@ -438,7 +451,8 @@ class MarkdownRendererTest extends TestCase {
 			allowExternalImages: false,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
-			noFollowExternalLinks: true
+			noFollowExternalLinks: true,
+			templateTransclusion: false
 		);
 
 		$renderer->render( "[[File:First.png]] and [[File:Second.png]]", true );
@@ -819,6 +833,195 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertCount( 1, $result->categories );
 		$this->assertCount( 1, $result->sections );
 		$this->assertSame( 0, $spy->renderedLinkCount );
+	}
+
+	public function testTemplateCallsAreLiteralTextWhenTransclusionDisabled(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render( 'See {{Greeting}} here', templateExpander: $expander );
+
+		$this->assertSame( "<p>See {{Greeting}} here</p>\n", $result->html );
+		$this->assertSame( [], $expander->calls );
+	}
+
+	public function testInlineTemplateCallIsExpandedAndInjectedRaw(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render(
+			'See {{Greeting}} here',
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertSame(
+			"<p>See <span class=\"fake-expanded\">{{Greeting}}</span> here</p>\n",
+			$result->html
+		);
+	}
+
+	public function testInlineTemplateCallPassesWikitextAndInlineFlagToExpander(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render( 'See {{Greeting|Ada}} here', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertCount( 1, $expander->calls );
+		$this->assertSame( '{{Greeting|Ada}}', $expander->calls[0]->wikitext );
+		$this->assertFalse( $expander->calls[0]->isBlock );
+	}
+
+	public function testBlockTemplateCallOnItsOwnLineIsNotWrappedInParagraph(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render( '{{Infobox}}', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertStringContainsString( '<div class="fake-expanded">{{Infobox}}</div>', $result->html );
+		$this->assertStringNotContainsString( '<p>', $result->html );
+		$this->assertTrue( $expander->calls[0]->isBlock );
+	}
+
+	public function testMultiLineBlockTemplateIsCapturedAsOneCall(): void {
+		$expander = new FakeTemplateExpander();
+		$wikitext = "{{Infobox person\n| name = Ada\n| born = 1815\n}}";
+
+		$this->render( $wikitext, templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertCount( 1, $expander->calls );
+		$this->assertSame( $wikitext, $expander->calls[0]->wikitext );
+		$this->assertTrue( $expander->calls[0]->isBlock );
+	}
+
+	public function testMultiLineBlockTemplateKeepsBlankParameterLines(): void {
+		$expander = new FakeTemplateExpander();
+		$wikitext = "{{Infobox\n| a = 1\n\n| b = 2\n}}";
+
+		$this->render( $wikitext, templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertSame( $wikitext, $expander->calls[0]->wikitext );
+	}
+
+	public function testNestedTemplateBecomesOneCall(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render( 'X {{outer|{{inner}}}} Y', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertCount( 1, $expander->calls );
+		$this->assertSame( '{{outer|{{inner}}}}', $expander->calls[0]->wikitext );
+	}
+
+	public function testTripleBraceArgumentSyntaxStaysLiteral(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render( 'Value: {{{param}}} here', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertSame( [], $expander->calls );
+		$this->assertStringContainsString( '{{{param}}}', $result->html );
+	}
+
+	public function testTemplateCallWithoutExpanderDegradesToEscapedLiteral(): void {
+		$result = $this->render( '{{Infobox}}', templateTransclusion: true );
+
+		$this->assertSame( "<p>{{Infobox}}</p>\n", $result->html );
+	}
+
+	public function testBalancedCallWithTrailingTextIsInlineNotBlock(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render( '{{Foo}} and more', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertFalse( $expander->calls[0]->isBlock );
+		$this->assertSame(
+			"<p><span class=\"fake-expanded\">{{Foo}}</span> and more</p>\n",
+			$result->html
+		);
+	}
+
+	public function testUnclosedBlockTemplateDegradesToLiteralInsteadOfExpanding(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render(
+			"{{Unclosed\nmore body text\nand still more",
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertSame( [], $expander->calls );
+		$this->assertStringContainsString( '{{Unclosed', $result->html );
+	}
+
+	public function testTemplateCallInsideInlineCodeStaysLiteral(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render( 'Use `{{Foo}}` in code', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertSame( [], $expander->calls );
+		$this->assertStringContainsString( '<code>{{Foo}}</code>', $result->html );
+	}
+
+	public function testTemplateCallInsideFencedCodeStaysLiteral(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render(
+			"```\n{{Foo}}\n```",
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertSame( [], $expander->calls );
+		$this->assertStringContainsString( '{{Foo}}', $result->html );
+	}
+
+	public function testBackslashEscapedBracesStayLiteral(): void {
+		$expander = new FakeTemplateExpander();
+
+		$result = $this->render( 'Literal \\{\\{Foo}} here', templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertSame( [], $expander->calls );
+		$this->assertStringContainsString( '{{Foo}}', $result->html );
+	}
+
+	public function testTemplateCallInHeadingContributesNothingToAnchor(): void {
+		$result = $this->render(
+			'## Section {{Foo}}',
+			templateTransclusion: true,
+			templateExpander: new FakeTemplateExpander()
+		);
+
+		$this->assertStringNotContainsString( 'Foo', $result->sections[0]->anchor );
+		$this->assertStringNotContainsString( '{', $result->sections[0]->anchor );
+	}
+
+	public function testSearchTextExcludesTemplateWikitext(): void {
+		$text = $this->newRenderer( templateTransclusion: true )
+			->extractPlainText( 'Body {{Foo|bar}} words' );
+
+		$this->assertStringNotContainsString( 'Foo', $text );
+		$this->assertStringNotContainsString( '{{', $text );
+		$this->assertStringContainsString( 'Body', $text );
+		$this->assertStringContainsString( 'words', $text );
+	}
+
+	public function testTemplateExpansionRunsEvenWhenNotGeneratingHtml(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render(
+			'{{Infobox}}',
+			generateHtml: false,
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertCount( 1, $expander->calls );
+	}
+
+	public function testEachTemplateCallOnItsOwnLineIsExpanded(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render( "{{First}}\n\n{{Second}}", templateTransclusion: true, templateExpander: $expander );
+
+		$this->assertSame(
+			[ '{{First}}', '{{Second}}' ],
+			array_map( static fn ( $call ) => $call->wikitext, $expander->calls )
+		);
 	}
 
 }

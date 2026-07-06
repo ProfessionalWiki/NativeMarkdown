@@ -22,6 +22,7 @@ See [For AI agents and LLMs](#for-ai-agents-and-llms).
 - [Usage documentation](https://professional.wiki/en/extension/native-markdown#Usage)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [Template transclusion](#template-transclusion)
 - [For AI agents and LLMs](#for-ai-agents-and-llms)
 - [Comparison with other Markdown extensions](#comparison-with-other-markdown-extensions)
 - [Development](#development)
@@ -92,6 +93,7 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below) |
 | `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, in every namespace |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
+| `$wgNativeMarkdownTemplateTransclusion` | `false` | Expand `{{template}}` calls on Markdown pages; when off they stay literal text (see [Template transclusion](#template-transclusion)) |
 
 `$wgNativeMarkdownEverywhere` covers the whole prose wiki, but deliberately leaves some pages as wikitext: the
 discussion (Talk) namespaces, where signatures and threading depend on wikitext; the Template and MediaWiki
@@ -99,6 +101,44 @@ namespaces; and any namespace whose content model is explicitly configured elsew
 or JSON namespace). Titles ending in `.css`, `.js` or `.json` never default to Markdown either, since MediaWiki
 reserves those for code pages. External links honor the core `$wgNoFollowLinks` setting. Input size is bounded
 by core's `$wgMaxArticleSize`.
+
+## Template transclusion
+
+By default `{{...}}` is literal text on a Markdown page. Set
+`$wgNativeMarkdownTemplateTransclusion = true` to expand template calls instead, so Markdown pages can reuse a
+wiki's shared infoboxes, citations and navboxes:
+
+```markdown
+{{Infobox person
+| name = Ada Lovelace
+| born = 1815
+}}
+
+Ada Lovelace was an English **mathematician**, regarded as the first computer programmer.
+```
+
+Expansion delegates to MediaWiki's own parser, so template dependencies are tracked (editing a template
+reparses the pages that transclude it), recursion and size limits apply, and the output is sanitized exactly
+as wikitext is. Because it is the real parser, enabling this **also enables parser functions and magic words**
+inside the braces (`{{#if:}}`, `{{PAGENAME}}`, and so on).
+
+Placement follows the split between block and inline content:
+
+- A call on its **own line** produces block output, so an infobox table renders as a block rather than being
+  wrapped in a paragraph. It may span multiple lines, including blank parameter lines, until the braces balance.
+- A call **within a line** of text renders inline and must stay on a single line; multi-line calls have to
+  start on their own line.
+- Template arguments are wikitext, not Markdown. Inside a GFM table cell, escape argument pipes as `\|`. Write
+  `\{\{` to keep braces literal.
+
+Out of scope in this version, by design:
+
+- `<ref>...</ref>` and `<references/>` in the Markdown body (these are tags, not `{{...}}`), and citation
+  state is not shared across separate calls on a page.
+- Transcluding another **Markdown** page with `{{:Page}}`: its source would be reinterpreted as wikitext, so
+  transclude wikitext pages instead. `subst:` does not substitute on save.
+- Enabling the setting does not reparse existing pages; they show template output once edited or purged. Run
+  `refreshLinks.php` to populate the template links eagerly.
 
 ## For AI agents and LLMs
 
@@ -177,6 +217,7 @@ Initial release for MediaWiki 1.43+ with these features:
 * Clean full-text search: rendered prose is indexed, not raw markup; front matter excluded
 * YAML front matter parsed, hidden from output and stored as page metadata
 * Per-page model switching via `Special:ChangeContentModel`, namespace/suffix/wiki-wide activation modes
+* Opt-in template transclusion: `{{template}}` calls expand via the MediaWiki parser, with dependency tracking
 * XSS-safe by construction: raw HTML escaped, unsafe links blocked, external images off by default
 * `action=raw` / REST return the stored Markdown byte for byte, built for AI agents and git round-trips
 * CodeEditor syntax highlighting on Markdown pages

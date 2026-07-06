@@ -94,7 +94,8 @@ class XssSafetyTest extends TestCase {
 			allowExternalImages: $allowExternalImages,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
-			noFollowExternalLinks: true
+			noFollowExternalLinks: true,
+			templateTransclusion: false
 		);
 
 		return $renderer->render( $markdown, generateHtml: true )->html;
