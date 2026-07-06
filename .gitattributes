@@ -1,0 +1,13 @@
+# Keep dev-only, CI, QA, docs and demo tooling out of the release archive that Composer /
+# Packagist installs (git archive). These stay in the repository; they just do not ship to wikis.
+/.github/         export-ignore
+/.gitattributes   export-ignore
+/.gitignore       export-ignore
+/codecov.yml      export-ignore
+/phpcs.xml        export-ignore
+/phpstan.neon     export-ignore
+/phpunit.xml.dist export-ignore
+/psalm.xml        export-ignore
+/tests/           export-ignore
+/docs/            export-ignore
+/demo/            export-ignore
