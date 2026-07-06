@@ -5,4 +5,4 @@ composer.lock
 vendor/
 
 # Generated demo video/image assets (regenerable; served copies live in the professional.wiki site repo)
-recordings/assets/
+demo/pipeline/assets/

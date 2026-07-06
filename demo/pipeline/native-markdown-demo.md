@@ -25,7 +25,7 @@ The demo drives the **local dev wiki only**; it never touches a live wiki.
 
 ## Assets produced
 
-All land in `recordings/assets/`. Even pixel dimensions throughout.
+All land in `demo/pipeline/assets/`. Even pixel dimensions throughout.
 
 | File | What | Size (ref) |
 |------|------|-----------|
@@ -52,7 +52,7 @@ All land in `recordings/assets/`. Even pixel dimensions throughout.
 
 ## How to regenerate (all deterministic — just run these)
 
-From `recordings/`:
+From `demo/pipeline/`:
 
 ```sh
 # 1. Stage the exact "before" page state (idempotent; safe to re-run before every take).
@@ -101,9 +101,9 @@ libass `BorderStyle=3` was avoided because it dips the box lower under space gly
 | Command | State |
 |---------|-------|
 | `record` | The demo "before" state: `Platform Architecture.md` minus its leading H1, `Database Operations.md` absent (red link). Run before each capture. |
-| `baseline` | Dogfood "before" state, H1 included. |
+| `baseline` | Fixtures "before" state, H1 included. |
 | `demo` | Applies the same edit the video makes, as a stand-in (used to shoot the supporting stills). |
-| `seed` | Full dogfood seed for a fresh wiki (mirrors `docs/dogfood/README.md`). |
+| `seed` | Full fixtures seed for a fresh wiki (mirrors `demo/fixtures/README.md`). |
 
 ## Encoding
 
@@ -149,10 +149,10 @@ no layout shift. The column renders it at up to ~925 CSS px; 1280-wide masters g
 
 - **Fully deterministic:** every asset above is produced by the commands here; nothing needs a human screen
   recorder. (The sibling SMW clip does, because it films a real terminal session.)
-- **Leading H1 removed for the recording.** The dogfood pages start with an `# H1` that repeats the page
+- **Leading H1 removed for the recording.** The fixtures pages start with an `# H1` that repeats the page
   title, so the rendered page would show the title twice and the ToC would nest a level deeper. In a silent
   video that's an unanswerable distraction, so `stage.sh record` loads `demo-pages/Platform
-  Architecture.recording.md` (dogfood content minus the H1). The H1 is optional in the product; this is
+  Architecture.recording.md` (fixtures content minus the H1). The H1 is optional in the product; this is
   staging, not a product change.
 - **The `.md` in the page title is intentional** — it's suffix detection (`$wgNativeMarkdownSuffixDetection`)
   and quietly reinforces "this page is Markdown" in every frame. Leave it. (Namespace/everywhere activation
@@ -181,6 +181,6 @@ not a general-purpose demo kit, and will not run unchanged on an arbitrary Media
   must change these (or derive them from `action=query&meta=siteinfo`). `WIKI_BASE` overrides only the host.
 - `stage.sh` assumes `docker compose` with a service named `mediawiki` (`MEDIAWIKI_DEV_ROOT` for the env root);
   `container-stage.sh` assumes MediaWiki at `/var/www/html` and an `AdminName`/`Admin` user.
-- The capture assumes the **Vector 2022** skin and the **CodeEditor (Ace)** extension, and that the dogfood
+- The capture assumes the **Vector 2022** skin and the **CodeEditor (Ace)** extension, and that the fixtures
   pages are seeded (`stage.sh seed`).
 - `make-video.sh` / `make_logo.py` default to **Fedora** font paths; override `CAPTION_FONT` or edit them.

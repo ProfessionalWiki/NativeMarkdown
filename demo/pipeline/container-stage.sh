@@ -5,18 +5,18 @@ set -euo pipefail
 
 MW=/var/www/html
 EXT="$MW/extensions/NativeMarkdown"
-DOGFOOD="$EXT/docs/dogfood"
-DEMO="$EXT/recordings/demo-pages"
+DOGFOOD="$EXT/demo/fixtures"
+DEMO="$EXT/demo/pipeline/demo-pages"
 USER=AdminName
 
 edit()   { php "$MW/maintenance/edit.php" --user "$USER" --summary "$2" "$1"; }
 jobs()   { php "$MW/maintenance/runJobs.php" --maxjobs 500 >/dev/null; }
 
 # Reset the demo delta to the known "before" state: Platform Architecture.md back to its
-# dogfood content (no Monitoring section, Database Operations link red) and the agent-created
+# fixtures content (no Monitoring section, Database Operations link red) and the agent-created
 # page removed. Run this before every terminal take so the recorded delta is identical.
 baseline() {
-  edit "Platform Architecture.md" "reset to dogfood baseline" < "$DOGFOOD/pages/Platform Architecture.md"
+  edit "Platform Architecture.md" "reset to fixtures baseline" < "$DOGFOOD/pages/Platform Architecture.md"
   printf 'Database Operations.md\n' > /tmp/nm-del.txt
   php "$MW/maintenance/deleteBatch.php" -u "$USER" -r "reset demo baseline" /tmp/nm-del.txt || true
   jobs
@@ -45,7 +45,7 @@ record() {
   echo "record: Platform Architecture.md staged without H1; Database Operations.md absent (red)."
 }
 
-# Full dogfood seed from scratch (fresh wiki only). Mirrors docs/dogfood/README.md.
+# Full fixtures seed from scratch (fresh wiki only). Mirrors demo/fixtures/README.md.
 seed() {
   rm -rf /tmp/nm-uploads && cp -r "$DOGFOOD/images" /tmp/nm-uploads
   rm -f /tmp/nm-uploads/*.py /tmp/nm-uploads/markdown-wiki-icon.png
@@ -55,7 +55,7 @@ seed() {
   done
   php "$MW/maintenance/edit.php" --user Admin "Category:Documentation" < "$DOGFOOD/pages/Category Documentation.wikitext"
   jobs
-  echo "seed: dogfood pages and images imported."
+  echo "seed: fixtures pages and images imported."
 }
 
 cmd="${1:-}"

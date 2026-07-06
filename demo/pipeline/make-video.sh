@@ -2,7 +2,7 @@
 # Post-process the raw edit-flow capture into the final demo assets:
 #   burn captions (drawtext, from captions.txt)  ->  append end-card.png  ->  encode WebM + MP4 + poster.
 # Captions use ffmpeg drawtext (one clean box per line) rather than libass, which draws the opaque
-# box per-glyph and dips lower under space characters. Run from recordings/ after:
+# box per-glyph and dips lower under space characters. Run from demo/pipeline/ after:
 #   node capture/edit-flow.mjs  and  node capture/end-card.mjs
 set -euo pipefail
 cd "$(dirname "$0")"

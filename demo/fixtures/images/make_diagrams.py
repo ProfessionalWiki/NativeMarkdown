@@ -1,4 +1,4 @@
-"""Generate two clean wiki-style diagrams for the dogfood pages."""
+"""Generate two clean wiki-style diagrams for the fixtures pages."""
 from PIL import Image, ImageDraw, ImageFont
 
 REG = "/usr/share/fonts/open-sans/OpenSans-Regular.ttf"
