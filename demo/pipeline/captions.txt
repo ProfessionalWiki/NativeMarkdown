@@ -1,0 +1,10 @@
+0.00|2.30|A normal MediaWiki page.
+2.40|4.60|There's no wikitext behind it.
+5.00|7.00|The whole page is plain Markdown.
+7.00|8.80|A native content model, not a tag hack.
+8.90|14.50|Add a heading, a link, a category…
+14.70|16.60|…and save.
+17.00|21.40|The table of contents grows. The link works.
+21.60|24.60|Our new category is present.
+25.00|27.40|action=raw: the stored Markdown.
+27.55|29.25|Exactly what LLMs read and write.

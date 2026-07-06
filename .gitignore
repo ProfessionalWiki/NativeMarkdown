@@ -3,3 +3,6 @@
 .phpunit.result.cache
 composer.lock
 vendor/
+
+# Generated demo video/image assets (regenerable; served copies live in the professional.wiki site repo)
+demo/pipeline/assets/
