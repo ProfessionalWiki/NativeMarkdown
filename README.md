@@ -93,7 +93,7 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below) |
 | `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, in every namespace |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
-| `$wgNativeMarkdownTemplateTransclusion` | `false` | Expand `{{template}}` calls on Markdown pages; when off they stay literal text (see [Template transclusion](#template-transclusion)) |
+| `$wgNativeMarkdownTemplateTransclusion` | `true` | Expand `{{template}}` calls on Markdown pages; set to `false` to leave them as literal text (see [Template transclusion](#template-transclusion)) |
 
 `$wgNativeMarkdownEverywhere` covers the whole prose wiki, but deliberately leaves some pages as wikitext: the
 discussion (Talk) namespaces, where signatures and threading depend on wikitext; the Template and MediaWiki
@@ -104,9 +104,8 @@ by core's `$wgMaxArticleSize`.
 
 ## Template transclusion
 
-By default `{{...}}` is literal text on a Markdown page. Set
-`$wgNativeMarkdownTemplateTransclusion = true` to expand template calls instead, so Markdown pages can reuse a
-wiki's shared infoboxes, citations and navboxes:
+Markdown pages transclude a wiki's shared infoboxes, citations and navboxes with the usual `{{...}}` syntax. Set
+`$wgNativeMarkdownTemplateTransclusion = false` to turn this off and leave `{{...}}` as literal text.
 
 ```markdown
 {{Infobox person
