@@ -85,21 +85,35 @@ class MarkdownDefaultPolicyTest extends TestCase {
 	}
 
 	public function testSuffixDetectionMatchesMdTitles(): void {
-		$policy = new MarkdownDefaultPolicy( namespaces: [], everywhere: false, suffixDetection: true );
-
-		$this->assertTrue( $policy->appliesTo( self::MAIN_NAMESPACE, isTalkNamespace: false, titleText: 'Release Notes.md', pageExists: false ) );
+		$this->assertTrue( $this->suffixDetectionPolicy()->appliesTo( self::MAIN_NAMESPACE, isTalkNamespace: false, titleText: 'Release Notes.md', pageExists: false ) );
 	}
 
 	public function testSuffixDetectionIgnoresOtherTitles(): void {
-		$policy = new MarkdownDefaultPolicy( namespaces: [], everywhere: false, suffixDetection: true );
-
-		$this->assertFalse( $policy->appliesTo( self::MAIN_NAMESPACE, isTalkNamespace: false, titleText: 'Release Notes.txt', pageExists: false ) );
+		$this->assertFalse( $this->suffixDetectionPolicy()->appliesTo( self::MAIN_NAMESPACE, isTalkNamespace: false, titleText: 'Release Notes.txt', pageExists: false ) );
 	}
 
 	public function testDisabledSuffixDetectionIgnoresMdTitles(): void {
 		$policy = new MarkdownDefaultPolicy( namespaces: [], everywhere: false, suffixDetection: false );
 
 		$this->assertFalse( $policy->appliesTo( self::MAIN_NAMESPACE, isTalkNamespace: false, titleText: 'Release Notes.md', pageExists: false ) );
+	}
+
+	public function testSuffixDetectionDoesNotApplyInTemplateNamespace(): void {
+		$this->assertFalse( $this->suffixDetectionPolicy()->appliesTo( self::TEMPLATE_NAMESPACE, isTalkNamespace: false, titleText: 'Infobox.md', pageExists: false ) );
+	}
+
+	public function testSuffixDetectionDoesNotApplyInMediaWikiNamespace(): void {
+		$this->assertFalse( $this->suffixDetectionPolicy()->appliesTo( self::MEDIAWIKI_NAMESPACE, isTalkNamespace: false, titleText: 'Sidebar.md', pageExists: false ) );
+	}
+
+	public function testSuffixDetectionAppliesInTalkNamespace(): void {
+		$this->assertTrue( $this->suffixDetectionPolicy()->appliesTo( self::TALK_NAMESPACE, isTalkNamespace: true, titleText: 'Some Discussion.md', pageExists: false ) );
+	}
+
+	public function testExplicitNamespaceListOverridesSuffixDetectionExclusion(): void {
+		$policy = new MarkdownDefaultPolicy( namespaces: [ self::TEMPLATE_NAMESPACE ], everywhere: false, suffixDetection: true );
+
+		$this->assertTrue( $policy->appliesTo( self::TEMPLATE_NAMESPACE, isTalkNamespace: false, titleText: 'Infobox.md', pageExists: false ) );
 	}
 
 	public function testNothingConfiguredNeverApplies(): void {
@@ -126,6 +140,10 @@ class MarkdownDefaultPolicyTest extends TestCase {
 
 	private function everywherePolicy(): MarkdownDefaultPolicy {
 		return new MarkdownDefaultPolicy( namespaces: [], everywhere: true, suffixDetection: false );
+	}
+
+	private function suffixDetectionPolicy(): MarkdownDefaultPolicy {
+		return new MarkdownDefaultPolicy( namespaces: [], everywhere: false, suffixDetection: true );
 	}
 
 }

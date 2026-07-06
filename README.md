@@ -91,7 +91,7 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 |---|---|---|
 | `$wgNativeMarkdownNamespaces` | `[]` | Namespace IDs in which new pages default to Markdown, e.g. `[ NS_HELP ]` |
 | `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below) |
-| `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, in every namespace |
+| `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, except in the Template and MediaWiki namespaces |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
 | `$wgNativeMarkdownTemplateTransclusion` | `true` | Expand `{{template}}` calls on Markdown pages; set to `false` to leave them as literal text (see [Template transclusion](#template-transclusion)) |
 
@@ -101,6 +101,11 @@ namespaces; and any namespace whose content model is explicitly configured elsew
 or JSON namespace). Titles ending in `.css`, `.js` or `.json` never default to Markdown either, since MediaWiki
 reserves those for code pages. External links honor the core `$wgNoFollowLinks` setting. Input size is bounded
 by core's `$wgMaxArticleSize`.
+
+`$wgNativeMarkdownSuffixDetection` reads the `.md` suffix as a deliberate per-page choice, so — unlike the
+wiki-wide mode — it also applies inside Talk namespaces, where a Markdown talk page then has no wikitext
+signatures or threading. It still skips the Template and MediaWiki namespaces, where Markdown can act as
+neither a template nor an interface message; add those to `$wgNativeMarkdownNamespaces` to opt them in anyway.
 
 ## Template transclusion
 

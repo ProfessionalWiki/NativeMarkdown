@@ -35,17 +35,26 @@ final class MarkdownDefaultPolicy {
 
 		return in_array( $namespace, $this->namespaces, true )
 			|| ( $this->everywhere && $this->isEverywhereNamespace( $namespace, $isTalkNamespace ) )
-			|| ( $this->suffixDetection && str_ends_with( $titleText, '.md' ) );
+			|| ( $this->suffixDetection && str_ends_with( $titleText, '.md' ) && $this->markdownCanServeNamespace( $namespace ) );
 	}
 
 	/**
-	 * The "everywhere" mode covers the whole prose wiki. Discussion namespaces stay
-	 * wikitext (signatures and threading depend on it), as do the Template and
-	 * MediaWiki namespaces (transclusion machinery and interface messages).
+	 * "Everywhere" mode covers the whole prose wiki. It leaves discussion namespaces as
+	 * wikitext: a blanket switch must not break the signatures and threading that Talk pages
+	 * rely on. Namespaces Markdown cannot serve are left out too.
 	 */
 	private function isEverywhereNamespace( int $namespace, bool $isTalkNamespace ): bool {
-		return !$isTalkNamespace
-			&& $namespace !== self::TEMPLATE_NAMESPACE
+		return !$isTalkNamespace && $this->markdownCanServeNamespace( $namespace );
+	}
+
+	/**
+	 * Template and MediaWiki pages are consumed by the software as wikitext: transclusion
+	 * with {{{parameters}}}, and interface messages. A Markdown page cannot fill either role,
+	 * so even an explicit .md suffix does not default it to Markdown there. Only the namespace
+	 * allow-list, a deliberate per-namespace choice, opts these in.
+	 */
+	private function markdownCanServeNamespace( int $namespace ): bool {
+		return $namespace !== self::TEMPLATE_NAMESPACE
 			&& $namespace !== self::MEDIAWIKI_NAMESPACE;
 	}
 
