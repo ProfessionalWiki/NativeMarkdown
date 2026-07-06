@@ -22,7 +22,7 @@ See [For AI agents and LLMs](#for-ai-agents-and-llms).
 - [Usage documentation](https://professional.wiki/en/extension/native-markdown#Usage)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Template transclusion](#template-transclusion)
+- [Templates and parser functions](#templates-and-parser-functions)
 - [For AI agents and LLMs](#for-ai-agents-and-llms)
 - [Comparison with other Markdown extensions](#comparison-with-other-markdown-extensions)
 - [Development](#development)
@@ -93,7 +93,7 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | `$wgNativeMarkdownEverywhere` | `false` | New pages everywhere default to Markdown, the "Markdown wiki" mode (see exclusions below) |
 | `$wgNativeMarkdownSuffixDetection` | `false` | New pages whose title ends in `.md` default to Markdown, except in the Template and MediaWiki namespaces |
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
-| `$wgNativeMarkdownTemplateTransclusion` | `true` | Expand `{{template}}` calls on Markdown pages; set to `false` to leave them as literal text (see [Template transclusion](#template-transclusion)) |
+| `$wgNativeMarkdownWikitextExpansion` | `true` | Run `{{...}}` on Markdown pages through the MediaWiki parser: templates, parser functions, magic words, and Lua modules. Set to `false` to leave `{{...}}` as literal text (see [Templates and parser functions](#templates-and-parser-functions)) |
 
 `$wgNativeMarkdownEverywhere` covers the whole prose wiki, but deliberately leaves some pages as wikitext: the
 discussion (Talk) namespaces, where signatures and threading depend on wikitext; the Template and MediaWiki
@@ -107,10 +107,13 @@ wiki-wide mode — it also applies inside Talk namespaces, where a Markdown talk
 signatures or threading. It still skips the Template and MediaWiki namespaces, where Markdown can act as
 neither a template nor an interface message; add those to `$wgNativeMarkdownNamespaces` to opt them in anyway.
 
-## Template transclusion
+## Templates and parser functions
 
-Markdown pages transclude a wiki's shared infoboxes, citations and navboxes with the usual `{{...}}` syntax. Set
-`$wgNativeMarkdownTemplateTransclusion = false` to turn this off and leave `{{...}}` as literal text.
+Markdown pages can use MediaWiki's `{{...}}` syntax. Because expansion delegates to the wikitext parser, this
+covers the whole double-brace surface: templates (a wiki's shared infoboxes, citations and navboxes), parser
+functions (`{{#if:}}`, `{{#switch:}}`, and so on), magic words and variables (`{{PAGENAME}}`, `{{CURRENTYEAR}}`),
+and, where [Scribunto] is installed, Lua modules via `{{#invoke:}}`. Set
+`$wgNativeMarkdownWikitextExpansion = false` to turn this off and leave `{{...}}` as literal text.
 
 ```markdown
 {{Infobox person
@@ -121,10 +124,11 @@ Markdown pages transclude a wiki's shared infoboxes, citations and navboxes with
 Ada Lovelace was an English **mathematician**, regarded as the first computer programmer.
 ```
 
-Expansion delegates to MediaWiki's own parser, so template dependencies are tracked (editing a template
-reparses the pages that transclude it), recursion and size limits apply, and the output is sanitized exactly
-as wikitext is. Because it is the real parser, enabling this **also enables parser functions and magic words**
-inside the braces (`{{#if:}}`, `{{PAGENAME}}`, and so on).
+Because it is the real parser, the same trust and resource model as wikitext applies: template dependencies are
+tracked (editing a template reparses the pages that transclude it), recursion and size limits apply, and output
+is sanitized exactly as wikitext is. Enabling `{{...}}` on a Markdown page grants the same capabilities a
+wikitext page has, so on a wiki with untrusted editors, weigh it the same way you weigh wikitext templates,
+parser functions and Lua.
 
 Placement follows the split between block and inline content:
 
@@ -223,7 +227,8 @@ Initial release for MediaWiki 1.43+ with these features:
 * Clean full-text search: rendered prose is indexed, not raw markup; front matter excluded
 * YAML front matter parsed, hidden from output and stored as page metadata
 * Per-page model switching via `Special:ChangeContentModel`, namespace/suffix/wiki-wide activation modes
-* Opt-in template transclusion: `{{template}}` calls expand via the MediaWiki parser, with dependency tracking
+* MediaWiki `{{...}}` expansion (on by default): templates, parser functions, magic words and Lua run through
+  the real parser with dependency tracking; opt out with `$wgNativeMarkdownWikitextExpansion = false`
 * XSS-safe by construction: raw HTML escaped, unsafe links blocked, external images off by default
 * `action=raw` / REST return the stored Markdown byte for byte, built for AI agents and git round-trips
 * CodeEditor syntax highlighting on Markdown pages
@@ -238,6 +243,7 @@ Initial release for MediaWiki 1.43+ with these features:
 [Composer install]: https://professional.wiki/en/articles/installing-mediawiki-extensions-with-composer
 [LocalSettings.php]: https://www.mediawiki.org/wiki/Manual:LocalSettings.php
 [CodeEditor extension]: https://www.mediawiki.org/wiki/Extension:CodeEditor
+[Scribunto]: https://www.mediawiki.org/wiki/Extension:Scribunto
 [MediaWiki MCP Server]: https://github.com/ProfessionalWiki/MediaWiki-MCP-Server
 [Extension:WikiMarkdown]: https://www.mediawiki.org/wiki/Extension:WikiMarkdown
 [Extension:Markdown]: https://www.mediawiki.org/wiki/Extension:Markdown
