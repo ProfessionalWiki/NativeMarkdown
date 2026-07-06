@@ -58,8 +58,8 @@
 			"value": false
 		},
 		"NativeMarkdownTemplateTransclusion": {
-			"description": "If MediaWiki template calls ({{...}}) on markdown pages should be transcluded. When false (default), they are literal text. Enabling this also enables parser functions and magic words inside the braces, as expansion delegates to the MediaWiki parser.",
-			"value": false
+			"description": "If MediaWiki template calls ({{...}}) on markdown pages should be transcluded (default). When false, they are literal text. Transclusion also enables parser functions and magic words inside the braces, as expansion delegates to the MediaWiki parser.",
+			"value": true
 		}
 	},
 
