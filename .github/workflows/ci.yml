@@ -16,6 +16,7 @@ jobs:
             php: '8.1'
           - mw: 'REL1_43'
             php: '8.3'
+            coverage: true
 
     runs-on: ubuntu-latest
 
@@ -69,7 +70,18 @@ jobs:
         run: php maintenance/update.php --quick
 
       - name: Run PHPUnit
+        if: ${{ !matrix.coverage }}
         run: php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
+
+      - name: Run PHPUnit with code coverage
+        if: ${{ matrix.coverage }}
+        run: php tests/phpunit/phpunit.php -c extensions/NativeMarkdown --coverage-clover coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_GLOBAL_TOKEN }}
 
   unit:
     name: "Standalone unit tests (no MediaWiki), PHP ${{ matrix.php }}"
