@@ -130,6 +130,8 @@ Placement follows the split between block and inline content:
   start on their own line.
 - Template arguments are wikitext, not Markdown. Inside a GFM table cell, escape argument pipes as `\|`. Write
   `\{\{` to keep braces literal.
+- A block call with no closing `}}` is rendered as literal text through to the end of the page (Markdown
+  parsing cannot backtrack), so a forgotten brace shows up as visible braces to fix rather than a silent error.
 
 Out of scope in this version, by design:
 

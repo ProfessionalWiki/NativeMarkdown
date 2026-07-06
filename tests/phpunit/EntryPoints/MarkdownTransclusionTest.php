@@ -91,11 +91,25 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( "# Real Heading\n\n{{Sections}}" );
 
-		$anchors = array_map(
+		$this->assertNotContains( 'Template_Heading', $this->tocAnchors( $output ) );
+	}
+
+	public function testTemplateHeadingsAreAbsentFromToCWhenThePageHasNoHeadings(): void {
+		$this->editPage( 'Template:Sections', "== Template Heading ==\nbody" );
+
+		$output = $this->getParserOutput( "Intro paragraph, no headings of its own.\n\n{{Sections}}" );
+
+		$this->assertNotContains( 'Template_Heading', $this->tocAnchors( $output ) );
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function tocAnchors( ParserOutput $output ): array {
+		return array_map(
 			static fn ( $section ) => $section->anchor,
 			$output->getTOCData()?->getSections() ?? []
 		);
-		$this->assertNotContains( 'Template_Heading', $anchors );
 	}
 
 	public function testTemplateCallIsLiteralWhenTransclusionDisabled(): void {

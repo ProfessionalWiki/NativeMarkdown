@@ -26,15 +26,17 @@ class MediaWikiTemplateExpanderTest extends MediaWikiIntegrationTestCase {
 		);
 	}
 
-	public function testBlockCallReturnsTemplateHtml(): void {
+	public function testBlockCallKeepsTheParagraphAroundLooseText(): void {
 		$this->editPage( 'Template:Box', 'Box body text' );
 
 		$html = $this->newExpander()->expand( new TemplateCall( '{{Box}}', true ) );
 
 		$this->assertStringContainsString( 'Box body text', $html );
+		// Loose text keeps the parser's paragraph, unlike an inline call.
+		$this->assertStringContainsString( '<p>', $html );
 	}
 
-	public function testBlockCallReturnsTableHtmlWithoutParagraphWrapper(): void {
+	public function testBlockCallRendersWikitableFromTemplate(): void {
 		$this->editPage( 'Template:Infobox', "{| class=\"wikitable\"\n| Cell\n|}" );
 
 		$html = $this->newExpander()->expand( new TemplateCall( '{{Infobox}}', true ) );
