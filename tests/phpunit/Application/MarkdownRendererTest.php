@@ -36,6 +36,7 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallNode
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlock
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateBraces
  * @covers \ProfessionalWiki\NativeMarkdown\Application\TemplateCall
  */
 class MarkdownRendererTest extends TestCase {
@@ -1022,6 +1023,20 @@ class MarkdownRendererTest extends TestCase {
 			[ '{{First}}', '{{Second}}' ],
 			array_map( static fn ( $call ) => $call->wikitext, $expander->calls )
 		);
+	}
+
+	public function testTemplateCallInTableCellUsesEscapedPipeForArguments(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render(
+			"| Col |\n|---|\n| {{Greeting\\|Ada}} |",
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertCount( 1, $expander->calls );
+		$this->assertSame( '{{Greeting|Ada}}', $expander->calls[0]->wikitext );
+		$this->assertFalse( $expander->calls[0]->isBlock );
 	}
 
 }

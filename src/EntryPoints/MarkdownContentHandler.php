@@ -208,16 +208,17 @@ final class MarkdownContentHandler extends TextContentHandler {
 		}
 	}
 
+	/**
+	 * Sets the table of contents from the page's own markdown headings,
+	 * authoritatively: it overwrites any TOCData and SHOW_TOC flag a transcluded
+	 * template merged in, so the contents list never lists template headings.
+	 */
 	private function registerSections( ParserOutput $output, RenderedMarkdown $rendered ): void {
-		if ( $rendered->sections === [] ) {
-			return;
-		}
-
 		$output->setTOCData( $this->buildTocData( $rendered->sections ) );
-
-		if ( count( $rendered->sections ) >= self::TOC_SECTION_THRESHOLD ) {
-			$output->setOutputFlag( ParserOutputFlags::SHOW_TOC );
-		}
+		$output->setOutputFlag(
+			ParserOutputFlags::SHOW_TOC,
+			count( $rendered->sections ) >= self::TOC_SECTION_THRESHOLD
+		);
 	}
 
 	/**

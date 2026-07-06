@@ -17,12 +17,6 @@ use League\CommonMark\Parser\InlineParserContext;
  */
 final class TemplateCallParser implements InlineParserInterface {
 
-	// Balanced `{{...}}` at the cursor, allowing nested calls on a single line.
-	// The recursion refers to group 1 (not the whole pattern) so the `\A` anchor
-	// stays outside it; the atomic group bounds backtracking so adversarial brace
-	// runs fail fast to literal.
-	private const BALANCED_CALL = '/\A(\{\{(?>[^{}\n]++|(?1))*\}\})/';
-
 	public function getMatchDefinition(): InlineParserMatch {
 		return InlineParserMatch::string( '{{' );
 	}
@@ -35,11 +29,11 @@ final class TemplateCallParser implements InlineParserInterface {
 			return false;
 		}
 
-		if ( preg_match( self::BALANCED_CALL, $cursor->getRemainder(), $matches ) !== 1 ) {
+		$wikitext = TemplateBraces::matchLeadingCall( $cursor->getRemainder() );
+
+		if ( $wikitext === null ) {
 			return false;
 		}
-
-		$wikitext = $matches[0];
 
 		// advanceBy() counts characters, not bytes, so byte offsets must be
 		// converted, as in WikiLinkParser.

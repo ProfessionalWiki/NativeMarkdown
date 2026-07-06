@@ -41,28 +41,10 @@ final class TemplateCallBlockStartParser implements BlockStartParserInterface {
 	 * the closing `}}`, meaning the call belongs inline rather than as a block.
 	 */
 	private function closesInlineOnFirstLine( string $line ): bool {
-		$depth = 0;
-		$length = strlen( $line );
+		$fromBraces = ltrim( $line, " \t" );
+		$call = TemplateBraces::matchLeadingCall( $fromBraces );
 
-		for ( $i = 0; $i < $length - 1; ) {
-			$pair = $line[$i] . $line[$i + 1];
-
-			if ( $pair === '{{' ) {
-				$depth++;
-				$i += 2;
-			} elseif ( $pair === '}}' ) {
-				$depth--;
-				$i += 2;
-
-				if ( $depth === 0 ) {
-					return trim( substr( $line, $i ) ) !== '';
-				}
-			} else {
-				$i++;
-			}
-		}
-
-		return false;
+		return $call !== null && trim( substr( $fromBraces, strlen( $call ) ) ) !== '';
 	}
 
 }

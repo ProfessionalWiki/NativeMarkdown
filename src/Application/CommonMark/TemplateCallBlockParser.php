@@ -42,7 +42,7 @@ final class TemplateCallBlockParser extends AbstractBlockContinueParser {
 
 	public function addLine( string $line ): void {
 		$this->lines[] = $line;
-		$this->depth += $this->braceDelta( $line );
+		$this->depth += TemplateBraces::depthDelta( $line );
 
 		if ( $this->depth <= 0 ) {
 			$this->finished = true;
@@ -52,32 +52,6 @@ final class TemplateCallBlockParser extends AbstractBlockContinueParser {
 	public function closeBlock(): void {
 		$this->block->wikitext = trim( implode( "\n", $this->lines ) );
 		$this->block->balanced = $this->depth === 0;
-	}
-
-	/**
-	 * Net change in brace nesting for one line: `{{` opens a level, `}}` closes
-	 * one. Stray single braces are ignored, which is enough to find where the
-	 * outer call balances.
-	 */
-	private function braceDelta( string $line ): int {
-		$delta = 0;
-		$length = strlen( $line );
-
-		for ( $i = 0; $i < $length - 1; ) {
-			$pair = $line[$i] . $line[$i + 1];
-
-			if ( $pair === '{{' ) {
-				$delta++;
-				$i += 2;
-			} elseif ( $pair === '}}' ) {
-				$delta--;
-				$i += 2;
-			} else {
-				$i++;
-			}
-		}
-
-		return $delta;
 	}
 
 }
