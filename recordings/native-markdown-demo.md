@@ -171,3 +171,16 @@ no layout shift. The column renders it at up to ~925 CSS px; 1280-wide masters g
   behind a checkpoint. The video is built to the README/SPEC story; the caption lines double as blog section
   headings ("There's no wikitext behind it", "Exactly what LLMs read and write") for one vocabulary across
   surfaces.
+
+## Environment coupling (before running on a different setup)
+
+These scripts target the ProfessionalWiki `mediawiki-dev` env specifically — they are internal tooling,
+not a general-purpose demo kit, and will not run unchanged on an arbitrary MediaWiki setup. To adapt:
+
+- `capture/lib.mjs` assumes an **empty script path** (`/index.php`, `/api.php`); a wiki using `/w/` + `/wiki/`
+  must change these (or derive them from `action=query&meta=siteinfo`). `WIKI_BASE` overrides only the host.
+- `stage.sh` assumes `docker compose` with a service named `mediawiki` (`MEDIAWIKI_DEV_ROOT` for the env root);
+  `container-stage.sh` assumes MediaWiki at `/var/www/html` and an `AdminName`/`Admin` user.
+- The capture assumes the **Vector 2022** skin and the **CodeEditor (Ace)** extension, and that the dogfood
+  pages are seeded (`stage.sh seed`).
+- `make-video.sh` / `make_logo.py` default to **Fedora** font paths; override `CAPTION_FONT` or edit them.
