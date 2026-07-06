@@ -82,6 +82,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_GLOBAL_TOKEN }}
+          slug: ProfessionalWiki/NativeMarkdown
 
   unit:
     name: "Standalone unit tests (no MediaWiki), PHP ${{ matrix.php }}"
