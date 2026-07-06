@@ -132,6 +132,24 @@ class NativeMarkdownHooksTest extends MediaWikiIntegrationTestCase {
 		);
 	}
 
+	public function testYieldsToAContentModelSetByALaterHook(): void {
+		$this->configureActivation( suffixDetection: true );
+		$this->setTemporaryHook(
+			'ContentHandlerDefaultModelFor',
+			static function ( Title $title, ?string &$model ): void {
+				if ( $title->getText() === 'Competing.md' ) {
+					$model = CONTENT_MODEL_JSON;
+				}
+			},
+			replace: false
+		);
+
+		$this->assertSame(
+			CONTENT_MODEL_JSON,
+			Title::makeTitle( NS_MAIN, 'Competing.md' )->getContentModel()
+		);
+	}
+
 	public function testUserScriptSubpageKeepsJavascriptModelUnderEverywhere(): void {
 		$this->configureActivation( everywhere: true );
 

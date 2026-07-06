@@ -14,9 +14,11 @@ final class NativeMarkdownHooks {
 	 * Makes new pages default to the markdown content model where the wiki's
 	 * configuration says so. Existing pages always keep their stored model.
 	 *
-	 * @return bool|void
+	 * Sets $model without aborting the hook chain, so a namespace whose content model
+	 * is set by a handler that runs after ours (such as Scribunto's for Module) still
+	 * wins, independent of extension load order.
 	 */
-	public static function onContentHandlerDefaultModelFor( Title $title, ?string &$model ) {
+	public static function onContentHandlerDefaultModelFor( Title $title, ?string &$model ): void {
 		// Only fill in where MediaWiki would otherwise fall back to wikitext. A
 		// namespace with an explicitly configured model (Scribunto, JSON, ...) already
 		// has $model set here, and must be left untouched.
@@ -36,7 +38,6 @@ final class NativeMarkdownHooks {
 
 		if ( $applies ) {
 			$model = NativeMarkdownExtension::CONTENT_MODEL;
-			return false;
 		}
 	}
 
