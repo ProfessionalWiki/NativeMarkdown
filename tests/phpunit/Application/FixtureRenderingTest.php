@@ -48,7 +48,8 @@ class FixtureRenderingTest extends TestCase {
 			allowExternalImages: false,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
-			noFollowExternalLinks: true
+			noFollowExternalLinks: true,
+			templateTransclusion: false
 		);
 
 		return $renderer->render( $markdown, generateHtml: true )->html;

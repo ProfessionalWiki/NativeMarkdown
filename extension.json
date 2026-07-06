@@ -56,6 +56,10 @@
 		"NativeMarkdownAllowExternalImages": {
 			"description": "If external images in markdown should be embedded. When false (default), they are rendered as plain links.",
 			"value": false
+		},
+		"NativeMarkdownTemplateTransclusion": {
+			"description": "If MediaWiki template calls ({{...}}) on markdown pages should be transcluded. When false (default), they are literal text. Enabling this also enables parser functions and magic words inside the braces, as expansion delegates to the MediaWiki parser.",
+			"value": false
 		}
 	},
 

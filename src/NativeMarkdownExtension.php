@@ -5,12 +5,15 @@ declare( strict_types = 1 );
 namespace ProfessionalWiki\NativeMarkdown;
 
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Page\PageReference;
 use MediaWiki\Parser\Parser;
+use MediaWiki\Parser\ParserOptions;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownDefaultPolicy;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\RedirectSyntax;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiPageLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTemplateExpander;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTitleParser;
 
 /**
@@ -66,7 +69,8 @@ final class NativeMarkdownExtension {
 			allowExternalImages: (bool)$services->getMainConfig()->get( 'NativeMarkdownAllowExternalImages' ),
 			maxNestingLevel: self::MAX_NESTING_LEVEL,
 			tocPlaceholderHtml: Parser::TOC_PLACEHOLDER,
-			noFollowExternalLinks: (bool)$services->getMainConfig()->get( 'NoFollowLinks' )
+			noFollowExternalLinks: (bool)$services->getMainConfig()->get( 'NoFollowLinks' ),
+			templateTransclusion: (bool)$services->getMainConfig()->get( 'NativeMarkdownTemplateTransclusion' )
 		);
 	}
 
@@ -80,6 +84,30 @@ final class NativeMarkdownExtension {
 		$defaultThumbSize = (int)$services->getUserOptionsLookup()->getDefaultOption( 'thumbsize' );
 
 		return (int)( $thumbLimits[$defaultThumbSize] ?? 300 );
+	}
+
+	/**
+	 * The expander a single page render uses to transclude its template calls,
+	 * or null when transclusion is disabled. Built per render because it carries
+	 * that render's page, options and revision.
+	 */
+	public function newTemplateExpander(
+		PageReference $page,
+		ParserOptions $parserOptions,
+		?int $revisionId
+	): ?MediaWikiTemplateExpander {
+		$services = MediaWikiServices::getInstance();
+
+		if ( !$services->getMainConfig()->get( 'NativeMarkdownTemplateTransclusion' ) ) {
+			return null;
+		}
+
+		return new MediaWikiTemplateExpander(
+			parserFactory: $services->getParserFactory(),
+			page: $page,
+			parserOptions: $parserOptions,
+			revisionId: $revisionId
+		);
 	}
 
 	public function newRedirectSyntax(): RedirectSyntax {

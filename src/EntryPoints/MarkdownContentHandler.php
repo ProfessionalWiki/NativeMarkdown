@@ -120,9 +120,18 @@ final class MarkdownContentHandler extends TextContentHandler {
 			return;
 		}
 
-		$rendered = NativeMarkdownExtension::getInstance()->getMarkdownRenderer()->render(
+		$extension = NativeMarkdownExtension::getInstance();
+
+		$templateExpander = $extension->newTemplateExpander(
+			$cpoParams->getPage(),
+			$cpoParams->getParserOptions(),
+			$cpoParams->getRevId()
+		);
+
+		$rendered = $extension->getMarkdownRenderer()->render(
 			$text,
-			$cpoParams->getGenerateHtml()
+			$cpoParams->getGenerateHtml(),
+			$templateExpander
 		);
 
 		$output->setFromParserOptions( $cpoParams->getParserOptions() );
@@ -132,6 +141,13 @@ final class MarkdownContentHandler extends TextContentHandler {
 		$this->registerFiles( $output, $rendered );
 		$this->registerExternalLinks( $output, $rendered );
 		$this->registerFrontMatter( $output, $rendered );
+
+		if ( $templateExpander !== null ) {
+			$templateExpander->mergeInto( $output );
+		}
+
+		// Last, so the page's table of contents comes from its own markdown
+		// headings, not from headings inside transcluded templates.
 		$this->registerSections( $output, $rendered );
 
 		$output->setRawText( $cpoParams->getGenerateHtml() ? $rendered->html : null );

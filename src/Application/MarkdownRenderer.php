@@ -31,6 +31,11 @@ use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ExternalLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNode;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNodeRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlock;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlockStartParser;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallNode;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallParser;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholder;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholderRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNode;
@@ -45,6 +50,7 @@ use ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkParser;
 final class MarkdownRenderer {
 
 	private const WIKI_LINK_PARSER_PRIORITY = 100;
+	private const TEMPLATE_CALL_PARSER_PRIORITY = 100;
 	private const RENDERER_OVERRIDE_PRIORITY = 10;
 
 	private MarkdownParser $parser;
@@ -58,9 +64,15 @@ final class MarkdownRenderer {
 		bool $allowExternalImages,
 		int $maxNestingLevel,
 		private readonly ?string $tocPlaceholderHtml,
-		bool $noFollowExternalLinks
+		bool $noFollowExternalLinks,
+		bool $templateTransclusion
 	) {
-		$environment = $this->newEnvironment( $allowExternalImages, $maxNestingLevel, $noFollowExternalLinks );
+		$environment = $this->newEnvironment(
+			$allowExternalImages,
+			$maxNestingLevel,
+			$noFollowExternalLinks,
+			$templateTransclusion
+		);
 
 		$this->parser = new MarkdownParser( $environment );
 		$this->htmlRenderer = new HtmlRenderer( $environment );
@@ -70,7 +82,8 @@ final class MarkdownRenderer {
 	private function newEnvironment(
 		bool $allowExternalImages,
 		int $maxNestingLevel,
-		bool $noFollowExternalLinks
+		bool $noFollowExternalLinks,
+		bool $templateTransclusion
 	): Environment {
 		$environment = new Environment( [
 			'html_input' => HtmlFilter::ESCAPE,
@@ -106,6 +119,17 @@ final class MarkdownRenderer {
 			);
 		}
 
+		// Registered only when the feature is on, so with it off `{{...}}` is
+		// never recognized and output stays identical to plain markdown.
+		if ( $templateTransclusion ) {
+			$templateRenderer = new TemplateCallRenderer();
+
+			$environment->addInlineParser( new TemplateCallParser(), self::TEMPLATE_CALL_PARSER_PRIORITY );
+			$environment->addBlockStartParser( new TemplateCallBlockStartParser() );
+			$environment->addRenderer( TemplateCallNode::class, $templateRenderer );
+			$environment->addRenderer( TemplateCallBlock::class, $templateRenderer );
+		}
+
 		return $environment;
 	}
 
@@ -116,20 +140,36 @@ final class MarkdownRenderer {
 	 * link and file adapters) propagate — falling back on those would cache
 	 * degraded output and empty the page's link tables.
 	 */
-	public function render( string $markdown, bool $generateHtml ): RenderedMarkdown {
+	public function render(
+		string $markdown,
+		bool $generateHtml,
+		?TemplateExpander $templateExpander = null
+	): RenderedMarkdown {
 		try {
-			return $this->renderDocument( $markdown, $generateHtml );
+			return $this->renderDocument( $markdown, $generateHtml, $templateExpander );
 		} catch ( CommonMarkException ) {
 			return $this->escapedSourceFallback( $markdown, $generateHtml );
 		}
 	}
 
-	private function renderDocument( string $markdown, bool $generateHtml ): RenderedMarkdown {
+	private function renderDocument(
+		string $markdown,
+		bool $generateHtml,
+		?TemplateExpander $templateExpander
+	): RenderedMarkdown {
 		[ $frontMatter, $content ] = $this->extractFrontMatter( $markdown );
 
 		$document = $this->parser->parse( $content );
 
 		[ $links, $categories, $files ] = $this->resolveWikiLinks( $document );
+
+		// Runs regardless of $generateHtml: expansion records each template's
+		// wiki dependencies, and a metadata-only parse that skipped it would
+		// leave the link tables incomplete and break template-edit invalidation.
+		if ( $templateExpander !== null ) {
+			$this->expandTemplateCalls( $document, $templateExpander );
+		}
+
 		$this->preloadLinkExistence( $links );
 		$this->preloadFileLookups( $files, $generateHtml );
 		$sections = $this->processHeadings( $document );
@@ -143,6 +183,38 @@ final class MarkdownRenderer {
 			externalLinks: $this->collectExternalLinks( $document ),
 			frontMatter: $frontMatter
 		);
+	}
+
+	/**
+	 * Replaces the raw wikitext of each template call with the expander's HTML.
+	 * Unbalanced block calls are skipped and shown by the renderer as literal
+	 * text rather than fed to the expander.
+	 */
+	private function expandTemplateCalls( Document $document, TemplateExpander $templateExpander ): void {
+		foreach ( $this->templateCallNodes( $document ) as $node ) {
+			if ( $node instanceof TemplateCallBlock && !$node->balanced ) {
+				continue;
+			}
+
+			$node->expandedHtml = $templateExpander->expand(
+				new TemplateCall( $node->wikitext, $node instanceof TemplateCallBlock )
+			);
+		}
+	}
+
+	/**
+	 * @return array<TemplateCallNode|TemplateCallBlock>
+	 */
+	private function templateCallNodes( Document $document ): array {
+		$nodes = [];
+
+		foreach ( $document->iterator() as $node ) {
+			if ( $node instanceof TemplateCallNode || $node instanceof TemplateCallBlock ) {
+				$nodes[] = $node;
+			}
+		}
+
+		return $nodes;
 	}
 
 	/**
@@ -197,6 +269,8 @@ final class MarkdownRenderer {
 		return match ( true ) {
 			$node instanceof WikiLinkNode => ' ' . $node->displayLabel() . ' ',
 			$node instanceof FileEmbedNode => ' ' . ( $node->embed->caption ?? $node->embed->altText ?? '' ) . ' ',
+			$node instanceof TemplateCallNode => '',
+			$node instanceof TemplateCallBlock => '',
 			$node instanceof StringContainerInterface => $node->getLiteral(),
 			$node instanceof Newline => ' ',
 			default => ''
@@ -483,6 +557,7 @@ final class MarkdownRenderer {
 			$text .= match ( true ) {
 				$child instanceof WikiLinkNode => $child->displayLabel(),
 				$child instanceof FileEmbedNode => '',
+				$child instanceof TemplateCallNode => '',
 				$child instanceof RawMarkupContainerInterface => '',
 				$child instanceof StringContainerInterface => $child->getLiteral(),
 				$child instanceof Newline => ' ',
