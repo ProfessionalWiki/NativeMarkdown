@@ -70,7 +70,7 @@ final class NativeMarkdownExtension {
 			maxNestingLevel: self::MAX_NESTING_LEVEL,
 			tocPlaceholderHtml: Parser::TOC_PLACEHOLDER,
 			noFollowExternalLinks: (bool)$services->getMainConfig()->get( 'NoFollowLinks' ),
-			templateTransclusion: (bool)$services->getMainConfig()->get( 'NativeMarkdownTemplateTransclusion' )
+			templateTransclusion: (bool)$services->getMainConfig()->get( 'NativeMarkdownWikitextExpansion' )
 		);
 	}
 
@@ -98,7 +98,7 @@ final class NativeMarkdownExtension {
 	): ?MediaWikiTemplateExpander {
 		$services = MediaWikiServices::getInstance();
 
-		if ( !$services->getMainConfig()->get( 'NativeMarkdownTemplateTransclusion' ) ) {
+		if ( !$services->getMainConfig()->get( 'NativeMarkdownWikitextExpansion' ) ) {
 			return null;
 		}
 

@@ -24,7 +24,7 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		$this->overrideConfigValue( 'NativeMarkdownTemplateTransclusion', true );
+		$this->overrideConfigValue( 'NativeMarkdownWikitextExpansion', true );
 	}
 
 	private function getParserOutput( string $markdown, bool $generateHtml = true ): ParserOutput {
@@ -113,7 +113,7 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 	}
 
 	public function testTemplateCallIsLiteralWhenTransclusionDisabled(): void {
-		$this->overrideConfigValue( 'NativeMarkdownTemplateTransclusion', false );
+		$this->overrideConfigValue( 'NativeMarkdownWikitextExpansion', false );
 		$this->editPage( 'Template:Greeting', 'Hello from the template' );
 
 		$output = $this->getParserOutput( '{{Greeting}}' );
