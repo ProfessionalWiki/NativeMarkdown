@@ -204,6 +204,11 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ## Release notes
 
+### Version 1.0.1 - 2026-07-07
+
+* Redirect pages now render and register the content after the `#REDIRECT [[Target]]` line, so redirect
+  categories (and any other trailing links or prose) work the same as on wikitext redirects
+
 ### Version 1.0.0 - 2026-07-07
 
 Initial release for MediaWiki 1.43+ with these features:
