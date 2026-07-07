@@ -98,4 +98,36 @@ class MarkdownRedirectTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( '[[:Category:Escaped Cat]]', $content->getText() );
 	}
 
+	public function testRedirectPageRegistersTrailingCategory(): void {
+		$output = $this->getParserOutput( "#REDIRECT [[Rcat Target]]\n\n[[Category:Redirects From Acronyms]]" );
+
+		$this->assertContains( 'Redirects_From_Acronyms', $output->getCategoryNames() );
+	}
+
+	public function testRedirectPageRegistersTrailingLink(): void {
+		$output = $this->getParserOutput( "#REDIRECT [[Primary Target]]\n\nSee also [[Trailing Related Page]]." );
+
+		$this->assertArrayHasKey( 'Trailing_Related_Page', $output->getLinks()[NS_MAIN] ?? [] );
+	}
+
+	public function testRedirectPageRendersTrailingContentBelowRedirectView(): void {
+		$output = $this->getParserOutput( "#REDIRECT [[Bodied Target]]\n\nTrailing prose after the redirect line." );
+
+		$this->assertStringContainsString( 'Trailing prose after the redirect line.', $output->getRawText() );
+	}
+
+	public function testRedirectPageWithTrailingContentStillRendersRedirectView(): void {
+		$output = $this->getParserOutput( "#REDIRECT [[Header Target]]\n\n[[Category:Some Rcat]]" );
+
+		$header = $output->getRedirectHeader();
+		$this->assertNotNull( $header );
+		$this->assertStringContainsString( 'Header Target', $header );
+	}
+
+	public function testBareRedirectPageRendersNoBodyContent(): void {
+		$output = $this->getParserOutput( '#REDIRECT [[Bare Target]]' );
+
+		$this->assertSame( '', $output->getRawText() );
+	}
+
 }
