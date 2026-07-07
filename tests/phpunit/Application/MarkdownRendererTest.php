@@ -10,6 +10,7 @@ use ProfessionalWiki\NativeMarkdown\Application\PageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\RenderedMarkdown;
 use ProfessionalWiki\NativeMarkdown\Application\Section;
 use ProfessionalWiki\NativeMarkdown\Application\TemplateExpander;
+use ProfessionalWiki\NativeMarkdown\Tests\FrontMatterBombs;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakePageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeTemplateExpander;
@@ -183,6 +184,35 @@ class MarkdownRendererTest extends TestCase {
 
 		$this->assertNull( $result->frontMatter );
 		$this->assertStringContainsString( 'Body', $result->html );
+	}
+
+	public function testAliasBombFrontMatterIsRejectedAndKeptOutOfOutput(): void {
+		// Bounded stand-in for a YAML alias bomb: rejected before the parser can
+		// expand it, so it is never stored and never leaks into the rendered body.
+		$result = $this->render( FrontMatterBombs::aliasBombBlock() . "\nVisible body." );
+
+		$this->assertNull( $result->frontMatter );
+		$this->assertSame( "<p>Visible body.</p>\n", $result->html );
+	}
+
+	public function testRejectedFrontMatterWithDecoyDelimiterDoesNotLeakIntoBody(): void {
+		// The guard matches league's block grammar (a closing "---" needs a
+		// newline after it), so it rejects on the real closing delimiter. The
+		// reject path must strip exactly that block, not stop at the decoy "---".
+		$result = $this->render( FrontMatterBombs::aliasBombBlockWithDecoyDelimiter() . "\nVisible body." );
+
+		$this->assertNull( $result->frontMatter );
+		$this->assertStringNotContainsString( 'DECOY', $result->html );
+		$this->assertStringContainsString( 'Visible body.', $result->html );
+	}
+
+	public function testFrontMatterWithAmpersandAndAsteriskInValuesIsStillParsed(): void {
+		$result = $this->render( "---\ntitle: R&D notes\nformula: 3 * 4 = 12\n---\n\nBody" );
+
+		$this->assertSame(
+			[ 'title' => 'R&D notes', 'formula' => '3 * 4 = 12' ],
+			$result->frontMatter
+		);
 	}
 
 	public function testWikiLinkRendersAndIsCollected(): void {
