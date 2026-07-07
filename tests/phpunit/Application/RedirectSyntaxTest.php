@@ -62,6 +62,28 @@ class RedirectSyntaxTest extends TestCase {
 		$this->assertNull( $this->englishSyntax()->extractTargetText( '#REDIRECT nowhere in particular' ) );
 	}
 
+	public function testExtractsTrailingContentAfterRedirectLine(): void {
+		$this->assertSame(
+			'[[Category:Redirects]]',
+			$this->englishSyntax()->extractTrailingContent( "#REDIRECT [[Target Page]]\n\n[[Category:Redirects]]" )
+		);
+	}
+
+	public function testKeepsTrailingContentAfterPipedRedirect(): void {
+		$this->assertSame(
+			'Trailing prose.',
+			$this->englishSyntax()->extractTrailingContent( "#REDIRECT [[Target Page|label]]\n\nTrailing prose." )
+		);
+	}
+
+	public function testHasNoTrailingContentForBareRedirect(): void {
+		$this->assertSame( '', $this->englishSyntax()->extractTrailingContent( '#REDIRECT [[Target Page]]' ) );
+	}
+
+	public function testHasNoTrailingContentWithoutMagicWord(): void {
+		$this->assertSame( '', $this->englishSyntax()->extractTrailingContent( '[[Target Page]]' ) );
+	}
+
 	public function testBuildsRedirectUsingPreferredSynonym(): void {
 		$syntax = new RedirectSyntax( magicWordSynonyms: [ '#WEITERLEITUNG', '#REDIRECT' ] );
 

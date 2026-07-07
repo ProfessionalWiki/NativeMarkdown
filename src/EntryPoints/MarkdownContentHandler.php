@@ -113,14 +113,15 @@ final class MarkdownContentHandler extends TextContentHandler {
 	protected function fillParserOutput( Content $content, ContentParseParams $cpoParams, ParserOutput &$output ): void {
 		$text = $content instanceof MarkdownContent ? $content->getText() : '';
 
-		$redirectTarget = $this->resolveRedirectTarget( $text );
-
-		if ( $redirectTarget !== null ) {
-			$this->fillRedirectParserOutput( $output, $cpoParams, $redirectTarget );
-			return;
-		}
-
 		$extension = NativeMarkdownExtension::getInstance();
+
+		// A redirect page renders the content after its `#REDIRECT [[Target]]`
+		// line (redirect categories and the like), the same as the wikitext
+		// handler; the redirect view is then added on top.
+		$redirectTarget = $this->resolveRedirectTarget( $text );
+		$markdown = $redirectTarget === null
+			? $text
+			: $extension->newRedirectSyntax()->extractTrailingContent( $text );
 
 		$templateExpander = $extension->newTemplateExpander(
 			$cpoParams->getPage(),
@@ -129,7 +130,7 @@ final class MarkdownContentHandler extends TextContentHandler {
 		);
 
 		$rendered = $extension->getMarkdownRenderer()->render(
-			$text,
+			$markdown,
 			$cpoParams->getGenerateHtml(),
 			$templateExpander
 		);
@@ -151,19 +152,23 @@ final class MarkdownContentHandler extends TextContentHandler {
 		$this->registerSections( $output, $rendered );
 
 		$output->setRawText( $cpoParams->getGenerateHtml() ? $rendered->html : null );
+
+		if ( $redirectTarget !== null ) {
+			$this->addRedirectIndicator( $output, $cpoParams, $redirectTarget );
+		}
 	}
 
 	/**
-	 * A redirect page shows MediaWiki's redirect view (the arrow to the target)
-	 * in place of its markdown body, and records the target as a link so page
-	 * moves, WhatLinksHere and the redirect table all see it.
+	 * Adds MediaWiki's redirect view (the arrow to the target) above the already
+	 * rendered body, and records the target as a link so page moves,
+	 * WhatLinksHere and the redirect table all see it. Mirrors the wikitext
+	 * handler, which likewise renders a redirect page's trailing content and
+	 * shows the redirect indicator on top of it.
 	 */
-	private function fillRedirectParserOutput( ParserOutput $output, ContentParseParams $cpoParams, Title $target ): void {
-		$output->setFromParserOptions( $cpoParams->getParserOptions() );
+	private function addRedirectIndicator( ParserOutput $output, ContentParseParams $cpoParams, Title $target ): void {
 		$output->addLink( $target );
 
 		if ( !$cpoParams->getGenerateHtml() ) {
-			$output->setRawText( null );
 			return;
 		}
 
@@ -174,7 +179,6 @@ final class MarkdownContentHandler extends TextContentHandler {
 			$services->getLinkRenderer()->makeRedirectHeader( $page->getPageLanguage(), $target )
 		);
 		$output->addModuleStyles( [ 'mediawiki.action.view.redirectPage' ] );
-		$output->setRawText( '' );
 	}
 
 	private function registerLinks( ParserOutput $output, RenderedMarkdown $rendered ): void {

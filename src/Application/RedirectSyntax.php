@@ -29,6 +29,30 @@ final class RedirectSyntax {
 	 * since redirect-target validation is a wiki concern.
 	 */
 	public function extractTargetText( string $pageText ): ?string {
+		$match = $this->matchRedirect( $pageText );
+
+		return $match === null ? null : $this->decodeTarget( $match['target'] );
+	}
+
+	/**
+	 * The page content following the redirect line, or an empty string when the
+	 * page is not a redirect or holds nothing after it. Mirrors how the wikitext
+	 * handler keeps the text after `#REDIRECT [[Target]]`, so trailing content
+	 * (redirect categories, for instance) still renders and registers.
+	 */
+	public function extractTrailingContent( string $pageText ): string {
+		$match = $this->matchRedirect( $pageText );
+
+		return $match === null ? '' : $match['trailing'];
+	}
+
+	/**
+	 * Splits a redirect page into its raw target text and the content that
+	 * follows the redirect line, or null when the page is not a redirect.
+	 *
+	 * @return array{target: string, trailing: string}|null
+	 */
+	private function matchRedirect( string $pageText ): ?array {
 		if ( $this->magicWordSynonyms === [] ) {
 			return null;
 		}
@@ -45,7 +69,10 @@ final class RedirectSyntax {
 			return null;
 		}
 
-		return $this->decodeTarget( $matches[1] );
+		return [
+			'target' => $matches[1],
+			'trailing' => substr( $afterMagicWord, strlen( $matches[0] ) ),
+		];
 	}
 
 	private function decodeTarget( string $target ): string {
