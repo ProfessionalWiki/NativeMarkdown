@@ -16,7 +16,11 @@ Because pages are stored as plain Markdown, they are directly consumable and wri
 `action=raw` returns clean Markdown; no wikitext conversion needed.
 See [For AI agents and LLMs](#for-ai-agents-and-llms).
 
-**Status: pre-release.** Configuration and behavior can still change.
+<img
+  src="docs/screenshots/native-markdown-demo.gif"
+  width="720"
+  alt="Editing a Markdown page: clean Markdown source, then the rendered page with a table of contents, wiki links, and a category"
+/>
 
 - [Introduction to the extension](https://professional.wiki/en/extension/native-markdown#Overview)
 - [Usage documentation](https://professional.wiki/en/extension/native-markdown#Usage)
@@ -31,29 +35,6 @@ See [For AI agents and LLMs](#for-ai-agents-and-llms).
 Get professional support for this extension via [Professional Wiki], its creators and maintainers.
 We provide [MediaWiki Development], [MediaWiki Hosting], and [MediaWiki Consulting] services.
 
-## Usage
-
-A Markdown page renders as a normal wiki page: MediaWiki table of contents, blue and red internal links,
-category assignment and working search, while `action=raw` returns the Markdown source.
-
-<img
-  src="docs/screenshots/rendered-page-with-toc.png"
-  width="720"
-  alt="A markdown page rendered with sidebar table of contents, an embedded diagram and a table with links"
-/>
-
-Editing uses the standard edit form. With the [CodeEditor extension] installed, Markdown pages get syntax
-highlighting; Show preview renders through the full pipeline:
-
-<img
-  src="docs/screenshots/editor-markdown-highlighting.png"
-  width="720"
-  alt="The wiki edit form with Markdown syntax highlighting"
-/>
-
-See the [full usage documentation](https://professional.wiki/en/extension/native-markdown#Usage) for the
-Markdown syntax, wiki-link reference, and page behavior notes.
-
 ## Installation
 
 Platform requirements:
@@ -61,7 +42,7 @@ Platform requirements:
 * [PHP] 8.1 or later
 * [MediaWiki] 1.43 or later
 
-**Not yet published to Packagist.** Once released, installation uses [Composer] with
+Installation uses [Composer] with
 [MediaWiki's built-in support for Composer][Composer install].
 
 On the command line, go to your wiki's root directory. Then run these two commands:
@@ -79,7 +60,13 @@ Then enable the extension by adding the following to the bottom of your wiki's [
 wfLoadExtension( 'NativeMarkdown' );
 ```
 
-For Markdown syntax highlighting in the editor, also install the [CodeEditor extension].
+For Markdown syntax highlighting in the editor, also install the [CodeEditor extension]:
+
+<img
+  src="docs/screenshots/editor-markdown-highlighting.png"
+  width="720"
+  alt="The wiki edit form with Markdown syntax highlighting"
+/>
 
 ## Configuration
 
