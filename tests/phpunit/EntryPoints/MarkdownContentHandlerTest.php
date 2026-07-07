@@ -10,6 +10,7 @@ use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Parser\ParserOutput;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContent;
+use ProfessionalWiki\NativeMarkdown\Tests\FrontMatterBombs;
 
 /**
  * @covers \ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContentHandler
@@ -96,6 +97,15 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 			[ 'status' => 'draft' ],
 			$output->getExtensionData( 'nativemarkdown-front-matter' )
 		);
+	}
+
+	public function testAliasBombFrontMatterIsNotStoredAsExtensionData(): void {
+		// Bounded stand-in for a YAML alias bomb: the guard rejects it before it
+		// can be parsed, so nothing reaches the serialized parser cache.
+		$output = $this->getParserOutput( FrontMatterBombs::aliasBombBlock() . "\nBody" );
+
+		$this->assertNull( $output->getExtensionData( 'nativemarkdown-front-matter' ) );
+		$this->assertStringContainsString( 'Body', $output->getRawText() );
 	}
 
 	public function testNoSectionEditLinksAppearInHtml(): void {

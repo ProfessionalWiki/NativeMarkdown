@@ -67,6 +67,7 @@ final class MarkdownRenderer {
 	private MarkdownParser $parser;
 	private HtmlRenderer $htmlRenderer;
 	private FrontMatterParser $frontMatterParser;
+	private FrontMatterGuard $frontMatterGuard;
 
 	public function __construct(
 		private readonly WikiTitleParser $titleParser,
@@ -88,6 +89,7 @@ final class MarkdownRenderer {
 		$this->parser = new MarkdownParser( $environment );
 		$this->htmlRenderer = new HtmlRenderer( $environment );
 		$this->frontMatterParser = new FrontMatterParser( new SymfonyYamlFrontMatterParser() );
+		$this->frontMatterGuard = new FrontMatterGuard();
 	}
 
 	private function newEnvironment(
@@ -388,8 +390,18 @@ final class MarkdownRenderer {
 	 * @return array{0: array<int|string, mixed>|null, 1: string}
 	 */
 	private function extractFrontMatter( string $markdown ): array {
+		$normalized = $this->withTrailingNewline( $markdown );
+
+		$rejectedBlock = $this->frontMatterGuard->rejectedBlock( $normalized );
+		if ( $rejectedBlock !== null ) {
+			// A YAML alias bomb: reject it before the parser can expand it, and
+			// drop exactly the block the guard matched, so none of the hostile
+			// front matter leaks into the body. Treated as no front matter.
+			return [ null, substr( $normalized, strlen( $rejectedBlock ) ) ];
+		}
+
 		try {
-			$input = $this->frontMatterParser->parse( $this->withTrailingNewline( $markdown ) );
+			$input = $this->frontMatterParser->parse( $normalized );
 		} catch ( \Exception ) {
 			return [ null, $markdown ];
 		}
