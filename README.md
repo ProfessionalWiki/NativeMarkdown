@@ -217,7 +217,7 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ## Release notes
 
-### Version 1.0.0 (not yet released)
+### Version 1.0.0 - 2026-07-07
 
 Initial release for MediaWiki 1.43+ with these features:
 
