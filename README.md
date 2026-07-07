@@ -9,11 +9,11 @@
 [![License](https://poser.pugx.org/professional-wiki/native-markdown/license)](LICENSE)
 
 [MediaWiki] extension that makes Markdown a **native content model**: whole pages are stored and edited as
-Markdown and rendered with real wiki integration (internal links, categories, table of contents and search),
+Markdown and rendered with real wiki integration (internal links, categories, search, templates, and more),
 coexisting with wikitext pages on the same wiki.
 
 Because pages are stored as plain Markdown, they are directly consumable and writable by LLMs and agents:
-`action=raw` returns clean Markdown, no wikitext conversion needed.
+`action=raw` returns clean Markdown; no wikitext conversion needed.
 See [For AI agents and LLMs](#for-ai-agents-and-llms).
 
 **Status: pre-release.** Configuration and behavior can still change.
