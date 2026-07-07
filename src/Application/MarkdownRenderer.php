@@ -53,6 +53,17 @@ final class MarkdownRenderer {
 	private const TEMPLATE_CALL_PARSER_PRIORITY = 100;
 	private const RENDERER_OVERRIDE_PRIORITY = 10;
 
+	/**
+	 * Upper bound on `{{...}}` expansions per page render. Each expansion is a
+	 * separate full wikitext parse that resets MediaWiki's per-parse anti-DoS
+	 * budgets (post-expand include size, expensive-function count, node count,
+	 * expansion depth), so without a cap the number of calls on a single page
+	 * multiplies those per-page limits, bounded only by the article size. 100 is
+	 * generous for real pages -- heavily-templated prose rarely reaches a few
+	 * dozen calls -- while turning the worst case into a fixed number of parses.
+	 */
+	private const MAX_TEMPLATE_EXPANSIONS_PER_RENDER = 100;
+
 	private MarkdownParser $parser;
 	private HtmlRenderer $htmlRenderer;
 	private FrontMatterParser $frontMatterParser;
@@ -186,19 +197,28 @@ final class MarkdownRenderer {
 	}
 
 	/**
-	 * Replaces the raw wikitext of each template call with the expander's HTML.
-	 * Unbalanced block calls are skipped and shown by the renderer as literal
-	 * text rather than fed to the expander.
+	 * Replaces the raw wikitext of each template call with the expander's HTML,
+	 * up to MAX_TEMPLATE_EXPANSIONS_PER_RENDER calls. Unbalanced block calls, and
+	 * every call once the cap is reached, are skipped: with a null expandedHtml
+	 * the renderer shows them as escaped literal text rather than expanding them.
 	 */
 	private function expandTemplateCalls( Document $document, TemplateExpander $templateExpander ): void {
+		$expansionCount = 0;
+
 		foreach ( $this->templateCallNodes( $document ) as $node ) {
 			if ( $node instanceof TemplateCallBlock && !$node->balanced ) {
 				continue;
 			}
 
+			if ( $expansionCount >= self::MAX_TEMPLATE_EXPANSIONS_PER_RENDER ) {
+				break;
+			}
+
 			$node->expandedHtml = $templateExpander->expand(
 				new TemplateCall( $node->wikitext, $node instanceof TemplateCallBlock )
 			);
+
+			$expansionCount++;
 		}
 	}
 

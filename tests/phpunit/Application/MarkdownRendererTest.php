@@ -1039,4 +1039,49 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertFalse( $expander->calls[0]->isBlock );
 	}
 
+	/**
+	 * A stack of distinct block calls `{{T1}}` .. `{{T$count}}`, one per block.
+	 */
+	private function blockTemplateCalls( int $count ): string {
+		return implode(
+			"\n\n",
+			array_map( static fn ( int $number ) => '{{T' . $number . '}}', range( 1, $count ) )
+		);
+	}
+
+	public function testExpandsEveryCallWhenDocumentIsExactlyAtTheExpansionCap(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render(
+			$this->blockTemplateCalls( 100 ),
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertCount( 100, $expander->calls );
+	}
+
+	public function testExpandsAtMostTheCapNumberOfCallsWhenDocumentExceedsIt(): void {
+		$expander = new FakeTemplateExpander();
+
+		$this->render(
+			$this->blockTemplateCalls( 103 ),
+			templateTransclusion: true,
+			templateExpander: $expander
+		);
+
+		$this->assertCount( 100, $expander->calls );
+	}
+
+	public function testCapBoundaryExpandsTheHundredthCallButLeavesTheHundredFirstLiteral(): void {
+		$html = $this->render(
+			$this->blockTemplateCalls( 103 ),
+			templateTransclusion: true,
+			templateExpander: new FakeTemplateExpander()
+		)->html;
+
+		$this->assertStringContainsString( '<div class="fake-expanded">{{T100}}</div>', $html );
+		$this->assertStringContainsString( '<p>{{T101}}</p>', $html );
+	}
+
 }
