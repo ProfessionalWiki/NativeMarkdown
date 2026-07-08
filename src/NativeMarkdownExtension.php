@@ -52,6 +52,9 @@ final class NativeMarkdownExtension {
 	private function newMarkdownRenderer(): MarkdownRenderer {
 		$services = MediaWikiServices::getInstance();
 
+		/** @var string[] $urlProtocols */
+		$urlProtocols = (array)$services->getMainConfig()->get( 'UrlProtocols' );
+
 		return new MarkdownRenderer(
 			titleParser: new MediaWikiTitleParser(
 				$services->getTitleParser(),
@@ -70,7 +73,8 @@ final class NativeMarkdownExtension {
 			maxNestingLevel: self::MAX_NESTING_LEVEL,
 			tocPlaceholderHtml: Parser::TOC_PLACEHOLDER,
 			noFollowExternalLinks: (bool)$services->getMainConfig()->get( 'NoFollowLinks' ),
-			templateTransclusion: (bool)$services->getMainConfig()->get( 'NativeMarkdownWikitextExpansion' )
+			templateTransclusion: (bool)$services->getMainConfig()->get( 'NativeMarkdownWikitextExpansion' ),
+			urlProtocols: $urlProtocols
 		);
 	}
 

@@ -23,4 +23,10 @@ final class SpyPageLinkRenderer implements PageLinkRenderer {
 		return '<a>' . htmlspecialchars( $label, ENT_QUOTES ) . '</a>';
 	}
 
+	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string {
+		$this->renderedLinkCount++;
+
+		return '<a>' . $labelHtml . '</a>';
+	}
+
 }

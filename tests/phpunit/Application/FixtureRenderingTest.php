@@ -49,7 +49,8 @@ class FixtureRenderingTest extends TestCase {
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
 			noFollowExternalLinks: true,
-			templateTransclusion: false
+			templateTransclusion: false,
+			urlProtocols: [ '//', 'http://', 'https://', 'ftp://', 'mailto:' ]
 		);
 
 		return $renderer->render( $markdown, generateHtml: true )->html;

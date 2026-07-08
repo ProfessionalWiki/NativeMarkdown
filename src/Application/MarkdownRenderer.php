@@ -27,10 +27,11 @@ use League\CommonMark\Node\StringContainerInterface;
 use League\CommonMark\Parser\MarkdownParser;
 use League\CommonMark\Renderer\HtmlRenderer;
 use League\CommonMark\Util\HtmlFilter;
-use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ExternalLinkRenderer;
+use League\CommonMark\Util\RegexHelper;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNode;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNodeRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\MarkdownLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlock;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlockStartParser;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallNode;
@@ -68,7 +69,12 @@ final class MarkdownRenderer {
 	private HtmlRenderer $htmlRenderer;
 	private FrontMatterParser $frontMatterParser;
 	private FrontMatterGuard $frontMatterGuard;
+	private ExternalUrlDetector $externalUrlDetector;
 
+	/**
+	 * @param string[] $urlProtocols The wiki's $wgUrlProtocols, used to tell an
+	 *   external markdown-link target from a wiki page title.
+	 */
 	public function __construct(
 		private readonly WikiTitleParser $titleParser,
 		private readonly PageLinkRenderer $pageLinkRenderer,
@@ -77,8 +83,11 @@ final class MarkdownRenderer {
 		int $maxNestingLevel,
 		private readonly ?string $tocPlaceholderHtml,
 		bool $noFollowExternalLinks,
-		bool $templateTransclusion
+		bool $templateTransclusion,
+		array $urlProtocols
 	) {
+		$this->externalUrlDetector = new ExternalUrlDetector( $urlProtocols );
+
 		$environment = $this->newEnvironment(
 			$allowExternalImages,
 			$maxNestingLevel,
@@ -120,14 +129,14 @@ final class MarkdownRenderer {
 		$environment->addRenderer( TocPlaceholder::class, new TocPlaceholderRenderer() );
 		$environment->addRenderer(
 			Link::class,
-			new ExternalLinkRenderer( $noFollowExternalLinks ),
+			new MarkdownLinkRenderer( $this->pageLinkRenderer, $this->externalUrlDetector, $noFollowExternalLinks ),
 			self::RENDERER_OVERRIDE_PRIORITY
 		);
 
 		if ( !$allowExternalImages ) {
 			$environment->addRenderer(
 				Image::class,
-				new ImageLinkRenderer( $noFollowExternalLinks ),
+				new ImageLinkRenderer( $this->externalUrlDetector, $noFollowExternalLinks ),
 				self::RENDERER_OVERRIDE_PRIORITY
 			);
 		}
@@ -175,6 +184,7 @@ final class MarkdownRenderer {
 		$document = $this->parser->parse( $content );
 
 		[ $links, $categories, $files ] = $this->resolveWikiLinks( $document );
+		$links = array_merge( $links, $this->resolveMarkdownLinks( $document ) );
 
 		// Runs regardless of $generateHtml: expansion records each template's
 		// wiki dependencies, and a metadata-only parse that skipped it would
@@ -542,13 +552,63 @@ final class MarkdownRenderer {
 	}
 
 	/**
+	 * Resolves standard markdown `[label](target)` links whose target names a wiki
+	 * page rather than a URL. The node is marked with its resolved title so the
+	 * renderer emits an internal link (red/blue styling, section fragments), and the
+	 * title is returned for registration in the link tables. Targets that are
+	 * external URLs, unsafe schemes, in-page anchors or path references are left
+	 * untouched for the link renderer to emit verbatim.
+	 *
+	 * @return WikiTitle[]
+	 */
+	private function resolveMarkdownLinks( Document $document ): array {
+		$links = [];
+
+		foreach ( $this->nodesOfType( $document, Link::class ) as $link ) {
+			$target = $link->getUrl();
+
+			if ( !$this->targetsWikiPage( $target ) ) {
+				continue;
+			}
+
+			$title = $this->titleParser->parse( $target );
+
+			if ( $title === null ) {
+				continue;
+			}
+
+			$link->data->set( MarkdownLinkRenderer::INTERNAL_TITLE_KEY, $title );
+
+			if ( !$title->isSamePageAnchor() ) {
+				$links[] = $title;
+			}
+		}
+
+		return $links;
+	}
+
+	/**
+	 * Whether a markdown link target names a wiki page instead of a URL to emit
+	 * verbatim. Mirrors how wikitext tells an internal target from an external one:
+	 * not an external-protocol URL (so `Help:X` is a title but `mailto:x` is not),
+	 * not an unsafe scheme, and not a fragment or absolute/relative path reference.
+	 */
+	private function targetsWikiPage( string $target ): bool {
+		return $target !== ''
+			&& !$this->externalUrlDetector->isExternalUrl( $target )
+			&& !RegexHelper::isLinkPotentiallyUnsafe( $target )
+			&& !str_starts_with( $target, '#' )
+			&& !str_starts_with( $target, '/' );
+	}
+
+	/**
 	 * @return string[]
 	 */
 	private function collectExternalLinks( Document $document ): array {
 		$urls = [];
 
 		foreach ( $this->nodesOfType( $document, Link::class ) as $link ) {
-			if ( ExternalLinkRenderer::isExternalUrl( $link->getUrl() ) ) {
+			if ( $this->externalUrlDetector->isExternalUrl( $link->getUrl() ) ) {
 				$urls[] = $link->getUrl();
 			}
 		}

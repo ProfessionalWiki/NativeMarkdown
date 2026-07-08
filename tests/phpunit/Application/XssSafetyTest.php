@@ -18,7 +18,8 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeWikiTitleParser;
  *
  * @covers \ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer
- * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\ExternalLinkRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\MarkdownLinkRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\ExternalUrlDetector
  */
 class XssSafetyTest extends TestCase {
 
@@ -95,7 +96,8 @@ class XssSafetyTest extends TestCase {
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
 			noFollowExternalLinks: true,
-			templateTransclusion: false
+			templateTransclusion: false,
+			urlProtocols: [ '//', 'http://', 'https://', 'ftp://', 'mailto:' ]
 		);
 
 		return $renderer->render( $markdown, generateHtml: true )->html;
