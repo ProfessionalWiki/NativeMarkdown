@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 
 namespace ProfessionalWiki\NativeMarkdown\Persistence;
 
+use HtmlArmor;
 use MediaWiki\Cache\LinkBatchFactory;
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Title\TitleValue;
@@ -35,6 +36,13 @@ final class MediaWikiPageLinkRenderer implements PageLinkRenderer {
 		return $this->linkRenderer->makeLink(
 			new TitleValue( $title->namespace, $title->dbKey, $title->fragment, $title->interwiki ),
 			$label
+		);
+	}
+
+	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string {
+		return $this->linkRenderer->makeLink(
+			new TitleValue( $title->namespace, $title->dbKey, $title->fragment, $title->interwiki ),
+			new HtmlArmor( $labelHtml )
 		);
 	}
 

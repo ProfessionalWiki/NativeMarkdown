@@ -28,7 +28,8 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNode
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNodeRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer
- * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\ExternalLinkRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\MarkdownLinkRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\ExternalUrlDetector
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholder
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholderRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallParser
@@ -41,6 +42,8 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
  * @covers \ProfessionalWiki\NativeMarkdown\Application\TemplateCall
  */
 class MarkdownRendererTest extends TestCase {
+
+	private const URL_PROTOCOLS = [ '//', 'http://', 'https://', 'ftp://', 'mailto:' ];
 
 	private function newRenderer(
 		bool $allowExternalImages = false,
@@ -56,7 +59,8 @@ class MarkdownRendererTest extends TestCase {
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: $tocPlaceholderHtml,
 			noFollowExternalLinks: true,
-			templateTransclusion: $templateTransclusion
+			templateTransclusion: $templateTransclusion,
+			urlProtocols: self::URL_PROTOCOLS
 		);
 	}
 
@@ -159,6 +163,82 @@ class MarkdownRendererTest extends TestCase {
 			[ 'https://example.com/a', 'https://example.com/b' ],
 			$result->externalLinks
 		);
+	}
+
+	public function testMarkdownLinkToInternalPageRendersWikiLinkAndIsCollected(): void {
+		$result = $this->render( '[the docs](Help:Example)' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Help:Example\">the docs</a></p>\n",
+			$result->html
+		);
+		$this->assertCount( 1, $result->links );
+		$this->assertSame( 'Help:Example', $result->links[0]->prefixedText );
+	}
+
+	public function testMarkdownLinkWithUnderscoresLinksToMultiWordTitle(): void {
+		// CommonMark ends an unbracketed destination at a space, so underscores
+		// stand in for spaces the way they do in MediaWiki page titles and URLs.
+		$result = $this->render( '[getting started](Help:Getting_Started)' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Help:Getting_Started\">getting started</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( 'Help:Getting_Started', $result->links[0]->prefixedText );
+	}
+
+	public function testMarkdownLinkToInternalPageKeepsFormattedLabel(): void {
+		$this->assertSame(
+			"<p><a href=\"/wiki/Help:Example\"><strong>bold</strong> label</a></p>\n",
+			$this->render( '[**bold** label](Help:Example)' )->html
+		);
+	}
+
+	public function testMarkdownLinkWithFragmentLinksToSection(): void {
+		$result = $this->render( '[history](Some_Page#History)' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Some_Page#History\">history</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( 'History', $result->links[0]->fragment );
+	}
+
+	public function testMarkdownLinkToInternalPageIsNotCollectedAsExternal(): void {
+		$this->assertSame( [], $this->render( '[x](Help:Example)' )->externalLinks );
+	}
+
+	public function testMarkdownLinkToInternalPageIsCollectedInMetadataOnlyRender(): void {
+		$result = $this->render( '[x](Help:Example)', generateHtml: false );
+
+		$this->assertCount( 1, $result->links );
+		$this->assertSame( 'Help:Example', $result->links[0]->prefixedText );
+	}
+
+	public function testMarkdownLinkExistenceIsPreloadedBeforeRendering(): void {
+		$recorder = new RecordingPageLinkRenderer();
+
+		$this->render( 'See [the docs](Help:Example) now', pageLinkRenderer: $recorder );
+
+		$this->assertSame(
+			[ 'preload:Help:Example', 'render:Help:Example' ],
+			$recorder->calls
+		);
+	}
+
+	public function testMailtoMarkdownLinkStaysExternal(): void {
+		$this->assertSame(
+			"<p><a href=\"mailto:hi@example.com\" class=\"external\" rel=\"nofollow\">mail us</a></p>\n",
+			$this->render( '[mail us](mailto:hi@example.com)' )->html
+		);
+	}
+
+	public function testMarkdownLinkToSamePageAnchorStaysPlainAndUnregistered(): void {
+		$result = $this->render( '[jump](#Section)' );
+
+		$this->assertSame( "<p><a href=\"#Section\">jump</a></p>\n", $result->html );
+		$this->assertSame( [], $result->links );
 	}
 
 	public function testRendersFootnote(): void {
@@ -483,7 +563,8 @@ class MarkdownRendererTest extends TestCase {
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
 			noFollowExternalLinks: true,
-			templateTransclusion: false
+			templateTransclusion: false,
+			urlProtocols: self::URL_PROTOCOLS
 		);
 
 		$renderer->render( "[[File:First.png]] and [[File:Second.png]]", true );

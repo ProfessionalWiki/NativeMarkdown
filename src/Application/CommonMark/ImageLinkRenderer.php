@@ -14,6 +14,7 @@ use League\CommonMark\Renderer\NodeRendererInterface;
 use League\CommonMark\Util\HtmlElement;
 use League\CommonMark\Util\RegexHelper;
 use League\CommonMark\Util\Xml;
+use ProfessionalWiki\NativeMarkdown\Application\ExternalUrlDetector;
 
 /**
  * Renders external images as plain links instead of embedding them,
@@ -22,6 +23,7 @@ use League\CommonMark\Util\Xml;
 final class ImageLinkRenderer implements NodeRendererInterface {
 
 	public function __construct(
+		private readonly ExternalUrlDetector $externalUrlDetector,
 		private readonly bool $noFollowExternalLinks
 	) {
 	}
@@ -43,7 +45,7 @@ final class ImageLinkRenderer implements NodeRendererInterface {
 	private function newLinkElement( string $url, string $label ): HtmlElement {
 		$attributes = [ 'href' => $url ];
 
-		if ( ExternalLinkRenderer::isExternalUrl( $url ) ) {
+		if ( $this->externalUrlDetector->isExternalUrl( $url ) ) {
 			$attributes['class'] = 'external';
 
 			if ( $this->noFollowExternalLinks ) {

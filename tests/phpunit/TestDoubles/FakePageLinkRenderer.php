@@ -21,6 +21,11 @@ final class FakePageLinkRenderer implements PageLinkRenderer {
 			. '">' . htmlspecialchars( $label, ENT_QUOTES ) . '</a>';
 	}
 
+	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string {
+		return '<a href="' . htmlspecialchars( $this->hrefFor( $title ), ENT_QUOTES )
+			. '">' . $labelHtml . '</a>';
+	}
+
 	private function hrefFor( WikiTitle $title ): string {
 		if ( $title->isSamePageAnchor() ) {
 			return '#' . $title->fragment;

@@ -21,4 +21,8 @@ final class ThrowingPageLinkRenderer implements PageLinkRenderer {
 		throw new RuntimeException( 'Database gone away' );
 	}
 
+	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string {
+		throw new RuntimeException( 'Database gone away' );
+	}
+
 }

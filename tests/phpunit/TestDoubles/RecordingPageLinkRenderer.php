@@ -31,4 +31,10 @@ final class RecordingPageLinkRenderer implements PageLinkRenderer {
 		return '<a>' . htmlspecialchars( $label, ENT_QUOTES ) . '</a>';
 	}
 
+	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string {
+		$this->calls[] = 'render:' . $title->textWithFragment();
+
+		return '<a>' . $labelHtml . '</a>';
+	}
+
 }

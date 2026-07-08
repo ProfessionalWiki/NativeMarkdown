@@ -24,4 +24,14 @@ interface PageLinkRenderer {
 	 */
 	public function renderLink( WikiTitle $title, string $label ): string;
 
+	/**
+	 * Like renderLink(), but for a label that is already safe HTML rather than
+	 * plain text. Markdown `[label](Target)` links use this because their label
+	 * may contain inline formatting (bold, code, ...) the plain-text path escapes.
+	 *
+	 * @param string $labelHtml Safe HTML for the link label.
+	 * @return string Safe HTML
+	 */
+	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string;
+
 }
