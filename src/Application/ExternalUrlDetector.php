@@ -21,7 +21,9 @@ final class ExternalUrlDetector {
 	}
 
 	public function isExternalUrl( string $url ): bool {
-		if ( preg_match( '#^[a-z][a-z0-9+.-]*://#i', $url ) === 1 ) {
+		// Any `scheme://` (or protocol-relative `//`) is external, even for a scheme
+		// the wiki did not configure -- such a string can never be a valid title.
+		if ( preg_match( '#^(?:[a-z][a-z0-9+.-]*:)?//#i', $url ) === 1 ) {
 			return true;
 		}
 
