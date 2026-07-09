@@ -29,7 +29,9 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkNodeRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\MarkdownLinkRenderer
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\SpacedLinkParser
  * @covers \ProfessionalWiki\NativeMarkdown\Application\ExternalUrlDetector
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\MarkdownLinkTargetResolver
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholder
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TocPlaceholderRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallParser
@@ -238,6 +240,94 @@ class MarkdownRendererTest extends TestCase {
 		$result = $this->render( '[jump](#Section)' );
 
 		$this->assertSame( "<p><a href=\"#Section\">jump</a></p>\n", $result->html );
+		$this->assertSame( [], $result->links );
+	}
+
+	public function testMarkdownLinkWithSpacedTargetLinksToWikiPageAndIsCollected(): void {
+		$result = $this->render( '[getting started](Help:Getting Started)' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Help:Getting Started\">getting started</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( 'Help:Getting Started', $result->links[0]->prefixedText );
+	}
+
+	public function testSpacedMarkdownLinkKeepsFormattedLabel(): void {
+		$this->assertSame(
+			"<p><a href=\"/wiki/Some Page\"><strong>bold</strong> label</a></p>\n",
+			$this->render( '[**bold** label](Some Page)' )->html
+		);
+	}
+
+	public function testSpacedMarkdownLinkWithUnmatchedEmphasisMarkerRendersLabelAsText(): void {
+		// The lone `*` leaves adjacent text nodes in the label; they must still
+		// render as one run (the parser skips league's AST-only text merging).
+		$this->assertSame(
+			"<p><a href=\"/wiki/Some Page\">a * b</a></p>\n",
+			$this->render( '[a * b](Some Page)' )->html
+		);
+	}
+
+	public function testSpacedMarkdownLinkAllowsBalancedParensInTarget(): void {
+		$result = $this->render( '[the planet](Mercury (planet))' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Mercury (planet)\">the planet</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( 'Mercury (planet)', $result->links[0]->prefixedText );
+	}
+
+	public function testSpacedMarkdownLinkIsCollectedInMetadataOnlyRender(): void {
+		$result = $this->render( '[x](Some Page)', generateHtml: false );
+
+		$this->assertSame( 'Some Page', $result->links[0]->prefixedText );
+	}
+
+	public function testSpacedTargetThatIsNotAValidTitleStaysLiteralText(): void {
+		$result = $this->render( '[x](foo <bad> bar)' );
+
+		$this->assertSame( "<p>[x](foo &lt;bad&gt; bar)</p>\n", $result->html );
+		$this->assertSame( [], $result->links );
+	}
+
+	public function testSpacelessLinksStillResolveAlongsideSpacedOnes(): void {
+		$result = $this->render( '[a](Help:A) and [b](Help Long Name)' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Help:A\">a</a> and <a href=\"/wiki/Help Long Name\">b</a></p>\n",
+			$result->html
+		);
+	}
+
+	public function testSpacedTextInReferenceLinkStillResolves(): void {
+		$result = $this->render( "[text][ref]\n\n[ref]: https://example.com" );
+
+		$this->assertStringContainsString( '<a href="https://example.com"', $result->html );
+	}
+
+	public function testImageWithSpacedTargetIsNotTurnedIntoAWikiLink(): void {
+		$html = $this->render( '![a cat](https://example.com/a cat.png)' )->html;
+
+		$this->assertStringNotContainsString( '/wiki/', $html );
+	}
+
+	public function testMarkdownLinkWithQuotedTitleLinksToDestinationNotWholeTarget(): void {
+		// `[docs](Manual "the guide")` is a standard titled link: it must link to
+		// the page `Manual`, not a bogus page named `Manual "the guide"`.
+		$result = $this->render( '[docs](Manual "the guide")' );
+
+		$this->assertSame( "<p><a href=\"/wiki/Manual\">docs</a></p>\n", $result->html );
+		$this->assertSame( 'Manual', $result->links[0]->prefixedText );
+	}
+
+	public function testOverlongSpacedTargetIsLeftToLeagueInsteadOfScannedToEnd(): void {
+		// The destination scan is length-capped so a runaway `[](` cannot make
+		// parsing quadratic; an over-long target is simply not treated as a link.
+		$result = $this->render( '[x](' . str_repeat( 'a ', 700 ) . ')' );
+
+		$this->assertStringNotContainsString( '<a', $result->html );
 		$this->assertSame( [], $result->links );
 	}
 

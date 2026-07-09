@@ -33,17 +33,15 @@ final class MediaWikiPageLinkRenderer implements PageLinkRenderer {
 	}
 
 	public function renderLink( WikiTitle $title, string $label ): string {
-		return $this->linkRenderer->makeLink(
-			new TitleValue( $title->namespace, $title->dbKey, $title->fragment, $title->interwiki ),
-			$label
-		);
+		return $this->linkRenderer->makeLink( $this->titleValueFor( $title ), $label );
 	}
 
 	public function renderLinkWithHtmlLabel( WikiTitle $title, string $labelHtml ): string {
-		return $this->linkRenderer->makeLink(
-			new TitleValue( $title->namespace, $title->dbKey, $title->fragment, $title->interwiki ),
-			new HtmlArmor( $labelHtml )
-		);
+		return $this->linkRenderer->makeLink( $this->titleValueFor( $title ), new HtmlArmor( $labelHtml ) );
+	}
+
+	private function titleValueFor( WikiTitle $title ): TitleValue {
+		return new TitleValue( $title->namespace, $title->dbKey, $title->fragment, $title->interwiki );
 	}
 
 }

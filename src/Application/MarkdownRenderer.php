@@ -27,11 +27,11 @@ use League\CommonMark\Node\StringContainerInterface;
 use League\CommonMark\Parser\MarkdownParser;
 use League\CommonMark\Renderer\HtmlRenderer;
 use League\CommonMark\Util\HtmlFilter;
-use League\CommonMark\Util\RegexHelper;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNode;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNodeRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\MarkdownLinkRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\SpacedLinkParser;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlock;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallBlockStartParser;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\TemplateCallNode;
@@ -52,6 +52,9 @@ final class MarkdownRenderer {
 
 	private const WIKI_LINK_PARSER_PRIORITY = 100;
 	private const TEMPLATE_CALL_PARSER_PRIORITY = 100;
+	// Above league's CloseBracketParser (30) so spaced wiki targets get a chance
+	// before it rejects them; it still handles every case this parser defers.
+	private const SPACED_LINK_PARSER_PRIORITY = 60;
 	private const RENDERER_OVERRIDE_PRIORITY = 10;
 
 	/**
@@ -70,6 +73,7 @@ final class MarkdownRenderer {
 	private FrontMatterParser $frontMatterParser;
 	private FrontMatterGuard $frontMatterGuard;
 	private ExternalUrlDetector $externalUrlDetector;
+	private MarkdownLinkTargetResolver $linkTargetResolver;
 
 	/**
 	 * @param string[] $urlProtocols The wiki's $wgUrlProtocols, used to tell an
@@ -87,6 +91,7 @@ final class MarkdownRenderer {
 		array $urlProtocols
 	) {
 		$this->externalUrlDetector = new ExternalUrlDetector( $urlProtocols );
+		$this->linkTargetResolver = new MarkdownLinkTargetResolver( $this->titleParser, $this->externalUrlDetector );
 
 		$environment = $this->newEnvironment(
 			$allowExternalImages,
@@ -124,6 +129,10 @@ final class MarkdownRenderer {
 		$environment->addExtension( new DefaultAttributesExtension() );
 
 		$environment->addInlineParser( new WikiLinkParser(), self::WIKI_LINK_PARSER_PRIORITY );
+		$environment->addInlineParser(
+			new SpacedLinkParser( $this->linkTargetResolver ),
+			self::SPACED_LINK_PARSER_PRIORITY
+		);
 		$environment->addRenderer( WikiLinkNode::class, new WikiLinkNodeRenderer( $this->pageLinkRenderer ) );
 		$environment->addRenderer( FileEmbedNode::class, new FileEmbedNodeRenderer( $this->fileEmbedRenderer ) );
 		$environment->addRenderer( TocPlaceholder::class, new TocPlaceholderRenderer() );
@@ -565,13 +574,7 @@ final class MarkdownRenderer {
 		$links = [];
 
 		foreach ( $this->nodesOfType( $document, Link::class ) as $link ) {
-			$target = $link->getUrl();
-
-			if ( !$this->targetsWikiPage( $target ) ) {
-				continue;
-			}
-
-			$title = $this->titleParser->parse( $target );
+			$title = $this->resolvedTitleFor( $link );
 
 			if ( $title === null ) {
 				continue;
@@ -588,17 +591,15 @@ final class MarkdownRenderer {
 	}
 
 	/**
-	 * Whether a markdown link target names a wiki page instead of a URL to emit
-	 * verbatim. Mirrors how wikitext tells an internal target from an external one:
-	 * not an external-protocol URL (so `Help:X` is a title but `mailto:x` is not),
-	 * not an unsafe scheme, and not a fragment or absolute/relative path reference.
+	 * The wiki page a markdown link points to, or null if it is not an internal
+	 * link. SpacedLinkParser resolves the title while parsing and leaves it on the
+	 * node, so reuse that instead of parsing the target a second time.
 	 */
-	private function targetsWikiPage( string $target ): bool {
-		return $target !== ''
-			&& !$this->externalUrlDetector->isExternalUrl( $target )
-			&& !RegexHelper::isLinkPotentiallyUnsafe( $target )
-			&& !str_starts_with( $target, '#' )
-			&& !str_starts_with( $target, '/' );
+	private function resolvedTitleFor( Link $link ): ?WikiTitle {
+		/** @var WikiTitle|null $stashed */
+		$stashed = $link->data->get( MarkdownLinkRenderer::INTERNAL_TITLE_KEY, null );
+
+		return $stashed ?? $this->linkTargetResolver->resolve( $link->getUrl() );
 	}
 
 	/**

@@ -42,6 +42,8 @@ class XssSafetyTest extends TestCase {
 		yield 'data html link' => [ '[x](data:text/html,<script>alert(1)</script>)' ];
 		yield 'entity encoded javascript link' => [ '[x](javascript&#58;alert(1))' ];
 		yield 'tab obfuscated javascript link' => [ "[x](java\tscript:alert(1))" ];
+		yield 'spaced javascript link' => [ '[x](javascript: alert(1))' ];
+		yield 'spaced vbscript link' => [ '[x](vbscript: msgbox 1)' ];
 		yield 'nested image in unsafe link' => [ '[![logo](https://e.com/l.png)](javascript:alert(1))' ];
 		yield 'wikilink label html' => [ '[[Some Page|<img src=x onerror=alert(1)>]]' ];
 		yield 'wikilink target breakout' => [ '[[Some Page"><script>alert(1)</script>]]' ];
