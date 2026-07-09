@@ -209,6 +209,12 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ## Release notes
 
+### Version 1.1.0 - 2026-07-09
+
+* Standard Markdown `[label](target)` links now resolve to wiki pages, the same as `[[target]]`: a target that
+  names a page (rather than a URL) becomes an internal link, with red/blue styling and link-table registration.
+  Multi-word targets work directly, e.g. `[the guide](Help:Getting Started)`. Real URLs stay external links.
+
 ### Version 1.0.1 - 2026-07-07
 
 * Redirect pages now render and register the content after the `#REDIRECT [[Target]]` line, so redirect
