@@ -1,0 +1,10 @@
+{
+	"@metadata": {
+		"authors": [
+			"Karsten Hoffmeyer",
+			"Professional Wiki"
+		]
+	},
+	"nativemarkdown-description": "Ermöglicht Markdown als natives Inhaltsmodell mit erstklassiger Wiki-Integration für interne Links, Kategorien, Inhaltsverzeichnisse und Suche",
+	"content-model-markdown": "Markdown"
+}
