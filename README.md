@@ -171,8 +171,8 @@ markup), so an agent's keyword lookups match what a reader sees rather than `#` 
 
 Links work the way a model already writes them: a plain `[label](Page Name)` link whose target is a page name
 rather than a URL resolves to an internal wiki link — red/blue styled and recorded in the link tables, the same
-as `[[Page Name]]`. Real URLs stay external links. Because Markdown ends an unbracketed target at the first
-space, use underscores for multi-word titles (`[getting started](Help:Getting_Started)`).
+as `[[Page Name]]`. Real URLs stay external links. Multi-word targets work directly, spaces and all
+(`[getting started](Help:Getting Started)`), so a model does not have to know to write underscores.
 
 ## Comparison with other Markdown extensions
 
