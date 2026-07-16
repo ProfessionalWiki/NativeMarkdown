@@ -219,6 +219,12 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( '>wikipedia:#History</a>', $output->getRawText() );
 	}
 
+	public function testMarkdownPageLoadsContentStyles(): void {
+		$output = $this->getParserOutput( 'Just some prose, without a code block in sight.' );
+
+		$this->assertContains( 'ext.nativeMarkdown.content', $output->getModuleStyles() );
+	}
+
 	public function testFencedCodeBlockWithLanguageIsSyntaxHighlighted(): void {
 		$this->skipIfSyntaxHighlightMissing();
 
