@@ -26,6 +26,17 @@
 		]
 	},
 
+	"ResourceFileModulePaths": {
+		"localBasePath": "resources",
+		"remoteExtPath": "NativeMarkdown/resources"
+	},
+
+	"ResourceModules": {
+		"ext.nativeMarkdown.styles": {
+			"styles": "ext.nativeMarkdown.styles.css"
+		}
+	},
+
 	"AutoloadNamespaces": {
 		"ProfessionalWiki\\NativeMarkdown\\": "src/",
 		"ProfessionalWiki\\NativeMarkdown\\Tests\\": "tests/phpunit/"

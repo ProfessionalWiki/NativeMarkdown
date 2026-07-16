@@ -27,6 +27,8 @@ final class MarkdownContentHandler extends TextContentHandler {
 
 	private const FRONT_MATTER_DATA_KEY = 'nativemarkdown-front-matter';
 
+	private const CONTENT_STYLES_MODULE = 'ext.nativeMarkdown.styles';
+
 	// Matches the threshold used by the wikitext parser ("enough" headings for a ToC).
 	private const TOC_SECTION_THRESHOLD = 4;
 
@@ -142,6 +144,7 @@ final class MarkdownContentHandler extends TextContentHandler {
 		$this->registerFiles( $output, $rendered );
 		$this->registerExternalLinks( $output, $rendered );
 		$this->registerFrontMatter( $output, $rendered );
+		$this->registerModules( $output, $rendered );
 
 		if ( $templateExpander !== null ) {
 			$templateExpander->mergeInto( $output );
@@ -210,6 +213,16 @@ final class MarkdownContentHandler extends TextContentHandler {
 		if ( $rendered->frontMatter !== null ) {
 			$output->setExtensionData( self::FRONT_MATTER_DATA_KEY, $rendered->frontMatter );
 		}
+	}
+
+	/**
+	 * Loads the base styles every markdown page needs, since skins do not style
+	 * CommonMark's markup correctly on their own, plus the modules the render
+	 * itself needs, such as the highlighter's for highlighted code blocks.
+	 */
+	private function registerModules( ParserOutput $output, RenderedMarkdown $rendered ): void {
+		$output->addModuleStyles( array_merge( [ self::CONTENT_STYLES_MODULE ], $rendered->styleModules ) );
+		$output->addModules( $rendered->modules );
 	}
 
 	/**

@@ -8,13 +8,17 @@ use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\PageReference;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOptions;
+use MediaWiki\Registration\ExtensionRegistry;
+use ProfessionalWiki\NativeMarkdown\Application\CodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownDefaultPolicy;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\NoOpCodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Application\RedirectSyntax;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiPageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTemplateExpander;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTitleParser;
+use ProfessionalWiki\NativeMarkdown\Persistence\SyntaxHighlightCodeHighlighter;
 
 /**
  * Composition root. All object graph wiring happens here; MediaWikiServices
@@ -69,6 +73,7 @@ final class NativeMarkdownExtension {
 				$services->getLinkRenderer(),
 				$this->defaultThumbnailWidth( $services )
 			),
+			codeHighlighter: $this->newCodeHighlighter(),
 			allowExternalImages: (bool)$services->getMainConfig()->get( 'NativeMarkdownAllowExternalImages' ),
 			maxNestingLevel: self::MAX_NESTING_LEVEL,
 			tocPlaceholderHtml: Parser::TOC_PLACEHOLDER,
@@ -76,6 +81,19 @@ final class NativeMarkdownExtension {
 			templateTransclusion: (bool)$services->getMainConfig()->get( 'NativeMarkdownWikitextExpansion' ),
 			urlProtocols: $urlProtocols
 		);
+	}
+
+	/**
+	 * Delegates fenced-code highlighting to Extension:SyntaxHighlight when it is
+	 * installed, and to a no-op otherwise, so highlighting is a silent
+	 * enhancement rather than a hard dependency.
+	 */
+	private function newCodeHighlighter(): CodeHighlighter {
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'SyntaxHighlight' ) ) {
+			return new SyntaxHighlightCodeHighlighter();
+		}
+
+		return new NoOpCodeHighlighter();
 	}
 
 	/**

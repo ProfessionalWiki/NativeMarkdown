@@ -68,6 +68,18 @@ For Markdown syntax highlighting in the editor, also install the [CodeEditor ext
   alt="The wiki edit form with Markdown syntax highlighting"
 />
 
+For syntax highlighting of fenced code blocks in the rendered page, install the
+[SyntaxHighlight extension] (bundled with MediaWiki). When it is installed, a fenced block whose info string
+names a language is highlighted server-side with Pygments, exactly like a wikitext `<syntaxhighlight>` block;
+without it, code blocks render as plain preformatted text.
+
+````markdown
+```python
+def greet(name):
+    print(f"Hello {name}")
+```
+````
+
 ## Configuration
 
 New pages use the Markdown content model where the wiki's configuration says so. Defaults apply to page
@@ -246,6 +258,7 @@ Initial release for MediaWiki 1.43+ with these features:
 [Composer install]: https://professional.wiki/en/articles/installing-mediawiki-extensions-with-composer
 [LocalSettings.php]: https://www.mediawiki.org/wiki/Manual:LocalSettings.php
 [CodeEditor extension]: https://www.mediawiki.org/wiki/Extension:CodeEditor
+[SyntaxHighlight extension]: https://www.mediawiki.org/wiki/Extension:SyntaxHighlight
 [Scribunto]: https://www.mediawiki.org/wiki/Extension:Scribunto
 [MediaWiki MCP Server]: https://github.com/ProfessionalWiki/MediaWiki-MCP-Server
 [Extension:WikiMarkdown]: https://www.mediawiki.org/wiki/Extension:WikiMarkdown

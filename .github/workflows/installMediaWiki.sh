@@ -28,6 +28,10 @@ echo '$wgShowExceptionDetails = true;' >> LocalSettings.php
 echo '$wgShowDBErrorBacktrace = true;' >> LocalSettings.php
 echo '$wgDevelopmentWarnings = true;' >> LocalSettings.php
 
+# Optional soft dependency: enables the integration tests that exercise the
+# SyntaxHighlight adapter (they skip themselves when it is not loaded).
+echo 'wfLoadExtension( "SyntaxHighlight_GeSHi" );' >> LocalSettings.php
+
 echo 'wfLoadExtension( "'$EXTENSION_NAME'" );' >> LocalSettings.php
 
 cat <<EOT >> composer.local.json

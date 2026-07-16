@@ -1,0 +1,14 @@
+/*!
+ * Base styles for markdown content.
+ *
+ * Skins style bare `code` for inline use, giving it a background, a border and
+ * padding. Since `code` is an inline element, that background paints once per
+ * line box, so a code block ends up with a pill behind each of its lines inside
+ * the box `pre` already draws. Wikitext never nests the two elements, so no skin
+ * resets this; CommonMark renders every code block as `pre > code`.
+ */
+.mw-parser-output pre > code {
+	background-color: transparent;
+	border: 0;
+	padding: 0;
+}
