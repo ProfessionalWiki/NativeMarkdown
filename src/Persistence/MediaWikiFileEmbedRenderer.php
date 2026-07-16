@@ -47,6 +47,14 @@ final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 		}
 	}
 
+	/**
+	 * Core's Linker registers this for a thumbnail only when passed a Parser, which
+	 * the ContentHandler render path has none of, so the caller adds it instead.
+	 */
+	public function modules(): array {
+		return [ 'mediawiki.page.media' ];
+	}
+
 	public function renderEmbed( FileEmbed $embed ): string {
 		$file = $this->findFile( $embed->title->dbKey );
 
@@ -67,11 +75,15 @@ final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 
 	/**
 	 * Delegates to core so the framed markup, magnify link and responsive
-	 * variants match a wikitext `|thumb` exactly. A width is always passed:
-	 * the requested one, or the wiki's default thumbnail size, since
+	 * variants match a wikitext `|thumb` exactly. For a missing file (a false
+	 * `$file`), core frames a broken-thumb box with the same visible caption and an
+	 * upload link inside, the way wikitext renders a missing thumbnail. A width is
+	 * always passed: the requested one, or the wiki's default thumbnail size, since
 	 * makeThumbLink2 would otherwise fall back to a smaller built-in default.
+	 *
+	 * @param File|false $file
 	 */
-	private function thumbnailFrameHtml( FileEmbed $embed, File $file ): string {
+	private function thumbnailFrameHtml( FileEmbed $embed, $file ): string {
 		return Linker::makeThumbLink2(
 			$this->fileTitle( $embed ),
 			$file,
@@ -163,7 +175,16 @@ final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 		return $options;
 	}
 
+	/**
+	 * A `thumb` on a missing file frames a broken-thumb box that keeps the caption
+	 * visible, as wikitext does; without it, the embed is a bare upload red link
+	 * labelled with the alt text, and the caption would be silently dropped.
+	 */
 	private function missingFileHtml( FileEmbed $embed ): string {
+		if ( $embed->thumbnail ) {
+			return $this->thumbnailFrameHtml( $embed, false );
+		}
+
 		return $this->wrap(
 			Linker::makeBrokenImageLinkObj(
 				$this->fileTitle( $embed ),

@@ -28,4 +28,8 @@ final class FakeFileEmbedRenderer implements FileEmbedRenderer {
 			. '>';
 	}
 
+	public function modules(): array {
+		return [ 'test.file.media' ];
+	}
+
 }

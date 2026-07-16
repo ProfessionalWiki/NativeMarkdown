@@ -97,6 +97,28 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( '<figcaption>Quarterly revenue</figcaption>', $html );
 	}
 
+	public function testMissingThumbnailRendersFramedBoxWithCaptionAndUploadLink(): void {
+		$html = $this->renderMissingFile( thumbnail: true, caption: 'Quarterly revenue' );
+
+		$this->assertStringContainsString( 'typeof="mw:Error mw:File/Thumb"', $html );
+		$this->assertStringContainsString( '<figcaption>Quarterly revenue</figcaption>', $html );
+		$this->assertStringContainsString( 'Special:Upload', $html );
+	}
+
+	public function testMissingThumbnailCaptionIsHtmlEscaped(): void {
+		$html = $this->renderMissingFile( thumbnail: true, caption: '<script>alert(1)</script>' );
+
+		$this->assertStringNotContainsString( '<script>', $html );
+		$this->assertStringContainsString( '&lt;script&gt;', $html );
+	}
+
+	public function testMissingInlineFileStaysPlainBrokenLinkWithoutFrame(): void {
+		$html = $this->renderMissingFile( thumbnail: false, caption: 'Quarterly revenue' );
+
+		$this->assertStringNotContainsString( '<figure', $html );
+		$this->assertStringContainsString( 'Special:Upload', $html );
+	}
+
 	public function testPreloadedFileRendersWithoutPerEmbedLookup(): void {
 		$repoGroup = $this->createMock( RepoGroup::class );
 		$repoGroup->method( 'findFiles' )->willReturn( [ 'Chart.png' => $this->newFileRenderingThumbnails() ] );
@@ -165,6 +187,29 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 				altText: $altText,
 				caption: $caption,
 				thumbnail: true
+			)
+		);
+	}
+
+	private function renderMissingFile(
+		bool $thumbnail,
+		?string $caption,
+		?string $altText = null
+	): string {
+		// The upload red link only appears where uploads are enabled; vanilla
+		// MediaWiki defaults them off, so pin it for a deterministic assertion.
+		$this->overrideConfigValue( MainConfigNames::EnableUploads, true );
+
+		$repoGroup = $this->createStub( RepoGroup::class );
+		$repoGroup->method( 'findFile' )->willReturn( false );
+
+		return $this->newRendererWithRepoGroup( $repoGroup )->renderEmbed(
+			new FileEmbed(
+				title: $this->chartTitle(),
+				width: null,
+				altText: $altText,
+				caption: $caption,
+				thumbnail: $thumbnail
 			)
 		);
 	}

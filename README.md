@@ -228,6 +228,12 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
   installed; without it, code blocks keep rendering as plain preformatted text
 * Code blocks no longer get a background pill behind each of their lines, which happened because skins style the
   `code` element for inline use and CommonMark nests it inside `pre`
+* A `thumb` file embed alone on its line now renders as a standalone framed thumbnail rather than being wrapped
+  in a paragraph, which produced invalid HTML5 and a stray empty paragraph
+* A `thumb` embed of a missing file now renders the framed box with its caption and an upload link, the way
+  wikitext does, instead of a bare upload link that silently dropped the caption
+* Thumbnail embeds now load the same media module MediaWiki loads for wikitext thumbnails, so their magnify
+  affordance works
 
 ### Version 1.1.0 - 2026-07-09
 

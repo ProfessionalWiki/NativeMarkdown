@@ -544,6 +544,33 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertSame( [], $result->links );
 	}
 
+	public function testStandaloneThumbnailEmbedIsNotWrappedInParagraph(): void {
+		$html = $this->render( '[[File:Cat.png|thumb|A cat]]' )->html;
+
+		$this->assertStringContainsString( 'data-fake-file="Cat.png"', $html );
+		$this->assertStringNotContainsString( '<p>', $html );
+	}
+
+	public function testSolitaryInlineEmbedStaysWrappedInParagraph(): void {
+		$html = $this->render( '[[File:Cat.png|A cat]]' )->html;
+
+		$this->assertStringContainsString( '<p><img data-fake-file="Cat.png"', $html );
+	}
+
+	public function testThumbnailEmbedWithSurroundingTextStaysInParagraph(): void {
+		$html = $this->render( 'Look: [[File:Cat.png|thumb|A cat]]' )->html;
+
+		$this->assertStringContainsString( '<p>Look: <img data-fake-file="Cat.png"', $html );
+	}
+
+	public function testParagraphWithTwoThumbnailEmbedsKeepsBothWrapped(): void {
+		$html = $this->render( "[[File:Cat.png|thumb|First]]\n[[File:Dog.png|thumb|Second]]" )->html;
+
+		$this->assertStringContainsString( '<p>', $html );
+		$this->assertStringContainsString( 'data-fake-file="Cat.png"', $html );
+		$this->assertStringContainsString( 'data-fake-file="Dog.png"', $html );
+	}
+
 	public function testColonPrefixedFileRendersPageLinkInsteadOfEmbedding(): void {
 		$result = $this->render( '[[:File:Cat.png]]' );
 
@@ -1389,6 +1416,33 @@ class MarkdownRendererTest extends TestCase {
 
 		$this->assertSame( [], $result->modules );
 		$this->assertSame( [], $result->styleModules );
+	}
+
+	public function testEmbeddedThumbnailReportsTheFileRenderersMediaModules(): void {
+		$result = $this->render( '[[File:Cat.png|thumb]]' );
+
+		$this->assertSame( [ 'test.file.media' ], $result->modules );
+	}
+
+	public function testInlineEmbedReportsNoMediaModules(): void {
+		$result = $this->render( '[[File:Cat.png]]' );
+
+		$this->assertSame( [], $result->modules );
+	}
+
+	public function testMetadataOnlyRenderReportsNoMediaModules(): void {
+		$result = $this->render( '[[File:Cat.png|thumb]]', generateHtml: false );
+
+		$this->assertSame( [], $result->modules );
+	}
+
+	public function testThumbnailAndHighlightedCodeReportBothModuleSets(): void {
+		$result = $this->render(
+			"[[File:Cat.png|thumb]]\n\n```python\nx\n```",
+			codeHighlighter: new FakeCodeHighlighter( modules: [ 'ext.demo.view' ] )
+		);
+
+		$this->assertSame( [ 'ext.demo.view', 'test.file.media' ], $result->modules );
 	}
 
 	/**

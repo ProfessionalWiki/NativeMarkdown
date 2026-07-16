@@ -20,6 +20,7 @@ use League\CommonMark\Extension\Table\Table;
 use League\CommonMark\Extension\Table\TableCell;
 use League\CommonMark\Node\Block\AbstractBlock;
 use League\CommonMark\Node\Block\Document;
+use League\CommonMark\Node\Block\Paragraph;
 use League\CommonMark\Node\Inline\Newline;
 use League\CommonMark\Node\Inline\Text;
 use League\CommonMark\Node\Node;
@@ -227,6 +228,10 @@ final class MarkdownRenderer {
 		// and skipping it avoids the highlighter's cost when the HTML is discarded.
 		$highlighted = $generateHtml && $this->highlightCodeBlocks( $document );
 
+		// Likewise HTML-only: a thumbnail's client-side module matters only once the
+		// thumbnail is actually rendered, which a metadata-only parse never does.
+		$rendersThumbnail = $generateHtml && $this->hasThumbnailEmbed( $files );
+
 		return new RenderedMarkdown(
 			html: $generateHtml ? $this->renderHtml( $document, $sections ) : '',
 			links: $links,
@@ -235,7 +240,10 @@ final class MarkdownRenderer {
 			sections: $sections,
 			externalLinks: $this->collectExternalLinks( $document ),
 			frontMatter: $frontMatter,
-			modules: $highlighted ? $this->codeHighlighter->modules() : [],
+			modules: array_merge(
+				$highlighted ? $this->codeHighlighter->modules() : [],
+				$rendersThumbnail ? $this->fileEmbedRenderer->modules() : []
+			),
 			styleModules: $highlighted ? $this->codeHighlighter->styleModules() : []
 		);
 	}
@@ -276,6 +284,19 @@ final class MarkdownRenderer {
 		}
 
 		return $anyHighlighted;
+	}
+
+	/**
+	 * @param FileEmbed[] $files
+	 */
+	private function hasThumbnailEmbed( array $files ): bool {
+		foreach ( $files as $embed ) {
+			if ( $embed->thumbnail ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -436,11 +457,60 @@ final class MarkdownRenderer {
 	 * @param Section[] $sections
 	 */
 	private function renderHtml( Document $document, array $sections ): string {
+		$this->promoteSolitaryThumbnailEmbeds( $document );
+
 		if ( $this->tocPlaceholderHtml !== null && $sections !== [] ) {
 			$this->insertTocPlaceholder( $document );
 		}
 
 		return $this->htmlRenderer->renderDocument( $document )->getContent();
+	}
+
+	/**
+	 * A thumbnail embed renders a block-level `<figure>`, which is invalid inside
+	 * the phrasing-only `<p>` that CommonMark wraps a solitary inline node in:
+	 * browsers auto-close the paragraph, shipping invalid HTML5 with a stray empty
+	 * `<p>` behind it. When such an embed is a paragraph's only content, replace the
+	 * paragraph with the embed so its `<figure>` becomes a sibling of the
+	 * surrounding blocks, the way wikitext emits a standalone thumbnail. Only the
+	 * solitary case is handled: a thumbnail that shares its paragraph with text or a
+	 * second embed is left wrapped, outside this fix's scope.
+	 */
+	private function promoteSolitaryThumbnailEmbeds( Document $document ): void {
+		foreach ( $this->nodesOfType( $document, Paragraph::class ) as $paragraph ) {
+			$embed = $this->solitaryThumbnailEmbed( $paragraph );
+
+			if ( $embed !== null ) {
+				$paragraph->replaceWith( $embed );
+			}
+		}
+	}
+
+	/**
+	 * The thumbnail embed that is a paragraph's sole content, ignoring surrounding
+	 * whitespace, or null when the paragraph holds anything else: other text, a
+	 * second embed, or a non-thumbnail embed (which renders inline and needs no
+	 * promotion).
+	 */
+	private function solitaryThumbnailEmbed( Paragraph $paragraph ): ?FileEmbedNode {
+		$embed = null;
+
+		foreach ( $paragraph->children() as $child ) {
+			if ( $child instanceof FileEmbedNode && $child->embed->thumbnail ) {
+				if ( $embed !== null ) {
+					return null;
+				}
+
+				$embed = $child;
+				continue;
+			}
+
+			if ( !$this->isBlankInline( $child ) ) {
+				return null;
+			}
+		}
+
+		return $embed;
 	}
 
 	/**
