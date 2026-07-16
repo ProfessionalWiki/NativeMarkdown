@@ -472,9 +472,9 @@ final class MarkdownRenderer {
 	 * browsers auto-close the paragraph, shipping invalid HTML5 with a stray empty
 	 * `<p>` behind it. When such an embed is a paragraph's only content, replace the
 	 * paragraph with the embed so its `<figure>` becomes a sibling of the
-	 * surrounding blocks, the way wikitext emits a standalone thumbnail. Embeds that
-	 * share their paragraph with other content are left wrapped, since they render
-	 * inline there.
+	 * surrounding blocks, the way wikitext emits a standalone thumbnail. Only the
+	 * solitary case is handled: a thumbnail that shares its paragraph with text or a
+	 * second embed is left wrapped, outside this fix's scope.
 	 */
 	private function promoteSolitaryThumbnailEmbeds( Document $document ): void {
 		foreach ( $this->nodesOfType( $document, Paragraph::class ) as $paragraph ) {
