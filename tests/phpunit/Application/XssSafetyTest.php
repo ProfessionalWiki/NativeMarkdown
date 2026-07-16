@@ -6,6 +6,7 @@ namespace ProfessionalWiki\NativeMarkdown\Tests\Application;
 
 use PHPUnit\Framework\TestCase;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\NoOpCodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakePageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeWikiTitleParser;
@@ -94,6 +95,7 @@ class XssSafetyTest extends TestCase {
 			titleParser: new FakeWikiTitleParser(),
 			pageLinkRenderer: new FakePageLinkRenderer(),
 			fileEmbedRenderer: new FakeFileEmbedRenderer(),
+			codeHighlighter: new NoOpCodeHighlighter(),
 			allowExternalImages: $allowExternalImages,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,

@@ -7,6 +7,10 @@ parameters:
 		- ../../includes
 		- ../../tests/phpunit
 		- ../../vendor
+		# Optional Extension:SyntaxHighlight, referenced by the Persistence adapter
+		# but not part of the scanned MediaWiki core. Cloned in CI; present in the
+		# dev env. Scanned for symbols only, so its own code is not analysed.
+		- ../../extensions/SyntaxHighlight_GeSHi/includes
 	bootstrapFiles:
 		- ../../includes/AutoLoader.php
 	treatPhpDocTypesAsCertain: false

@@ -8,6 +8,7 @@ use MediaWiki\Interwiki\ClassicInterwikiLookup;
 use MediaWiki\MainConfigNames;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Registration\ExtensionRegistry;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContent;
 use ProfessionalWiki\NativeMarkdown\Tests\FrontMatterBombs;
@@ -216,6 +217,31 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 		$output = $this->getParserOutput( 'See [[wikipedia:#History]] for details' );
 
 		$this->assertStringContainsString( '>wikipedia:#History</a>', $output->getRawText() );
+	}
+
+	public function testFencedCodeBlockWithLanguageIsSyntaxHighlighted(): void {
+		$this->skipIfSyntaxHighlightMissing();
+
+		$output = $this->getParserOutput( "```python\nprint('hi')\n```" );
+
+		$this->assertStringContainsString( 'mw-highlight-lang-python', $output->getRawText() );
+		$this->assertContains( 'ext.pygments', $output->getModuleStyles() );
+		$this->assertContains( 'ext.pygments.view', $output->getModules() );
+	}
+
+	public function testFencedCodeBlockWithoutLanguageIsNotHighlighted(): void {
+		$this->skipIfSyntaxHighlightMissing();
+
+		$output = $this->getParserOutput( "```\nplain code\n```" );
+
+		$this->assertStringContainsString( '<pre><code>plain code', $output->getRawText() );
+		$this->assertNotContains( 'ext.pygments', $output->getModuleStyles() );
+	}
+
+	private function skipIfSyntaxHighlightMissing(): void {
+		if ( !ExtensionRegistry::getInstance()->isLoaded( 'SyntaxHighlight' ) ) {
+			$this->markTestSkipped( 'Extension:SyntaxHighlight is not installed' );
+		}
 	}
 
 	private function configureWikipediaInterwiki(): void {

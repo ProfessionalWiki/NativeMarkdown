@@ -40,7 +40,7 @@ jobs:
             mediawiki
             !mediawiki/extensions/
             !mediawiki/vendor/
-          key: mw_${{ matrix.mw }}-php${{ matrix.php }}-v1
+          key: mw_${{ matrix.mw }}-php${{ matrix.php }}-v2
 
       - name: Cache Composer cache
         uses: actions/cache@v4
@@ -65,6 +65,11 @@ jobs:
         run: composer config --no-plugins allow-plugins.composer/installers true
 
       - run: composer update
+
+      # Optional soft dependency: rendered separately from the MW cache because
+      # extensions/ is excluded from it, so this clone runs on every job.
+      - name: Clone SyntaxHighlight
+        run: git clone --depth 1 -b ${{ matrix.mw }} https://github.com/wikimedia/mediawiki-extensions-SyntaxHighlight_GeSHi extensions/SyntaxHighlight_GeSHi
 
       - name: Run update.php
         run: php maintenance/update.php --quick
@@ -146,7 +151,7 @@ jobs:
             mediawiki
             !mediawiki/extensions/
             !mediawiki/vendor/
-          key: mw_static_analysis-v1
+          key: mw_static_analysis-v2
 
       - name: Cache Composer cache
         uses: actions/cache@v4
@@ -172,6 +177,12 @@ jobs:
 
       - name: Composer update
         run: composer update --no-progress --no-interaction --prefer-dist --optimize-autoloader
+
+      # SyntaxHighlight is only a soft dependency, but the Persistence adapter
+      # references its class, so phpstan and psalm need its source to resolve it.
+      - name: Clone SyntaxHighlight
+        working-directory: mediawiki
+        run: git clone --depth 1 -b ${{ matrix.mw }} https://github.com/wikimedia/mediawiki-extensions-SyntaxHighlight_GeSHi extensions/SyntaxHighlight_GeSHi
 
       - name: PHPStan
         run: php vendor/bin/phpstan analyse --error-format=checkstyle --no-progress | cs2pr
@@ -210,7 +221,7 @@ jobs:
             mediawiki
             !mediawiki/extensions/
             !mediawiki/vendor/
-          key: mw_static_analysis-v1
+          key: mw_static_analysis-v2
 
       - name: Cache Composer cache
         uses: actions/cache@v4

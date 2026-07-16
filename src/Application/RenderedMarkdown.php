@@ -17,6 +17,8 @@ final class RenderedMarkdown {
 	 * @param Section[] $sections
 	 * @param string[] $externalLinks External URLs this document links to
 	 * @param array<int|string, mixed>|null $frontMatter
+	 * @param string[] $modules ResourceLoader modules the rendered HTML needs
+	 * @param string[] $styleModules ResourceLoader style modules the rendered HTML needs
 	 */
 	public function __construct(
 		public readonly string $html,
@@ -25,7 +27,9 @@ final class RenderedMarkdown {
 		public readonly array $files,
 		public readonly array $sections,
 		public readonly array $externalLinks,
-		public readonly ?array $frontMatter
+		public readonly ?array $frontMatter,
+		public readonly array $modules,
+		public readonly array $styleModules
 	) {
 	}
 

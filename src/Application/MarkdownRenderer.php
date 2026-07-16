@@ -8,6 +8,7 @@ use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\DefaultAttributes\DefaultAttributesExtension;
+use League\CommonMark\Extension\CommonMark\Node\Block\FencedCode;
 use League\CommonMark\Extension\CommonMark\Node\Block\Heading;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
@@ -29,6 +30,7 @@ use League\CommonMark\Renderer\HtmlRenderer;
 use League\CommonMark\Util\HtmlFilter;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNode;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\FileEmbedNodeRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\CommonMark\HighlightedCodeRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\ImageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\MarkdownLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\CommonMark\SpacedLinkParser;
@@ -68,6 +70,16 @@ final class MarkdownRenderer {
 	 */
 	private const MAX_TEMPLATE_EXPANSIONS_PER_RENDER = 100;
 
+	/**
+	 * Upper bound on syntax-highlight attempts per page render. Each attempt can
+	 * shell out to an external highlighter (pygmentize), and unlike wikitext's
+	 * `<syntaxhighlight>` there is no wikitext-parser expensive-function budget
+	 * bounding it in the ContentHandler context, so the count is capped here. 100
+	 * is generous for real pages while turning the worst case into a fixed number
+	 * of invocations; blocks past the cap render with the default escaped renderer.
+	 */
+	private const MAX_HIGHLIGHTED_BLOCKS_PER_RENDER = 100;
+
 	private MarkdownParser $parser;
 	private HtmlRenderer $htmlRenderer;
 	private FrontMatterParser $frontMatterParser;
@@ -83,6 +95,7 @@ final class MarkdownRenderer {
 		private readonly WikiTitleParser $titleParser,
 		private readonly PageLinkRenderer $pageLinkRenderer,
 		private readonly FileEmbedRenderer $fileEmbedRenderer,
+		private readonly CodeHighlighter $codeHighlighter,
 		bool $allowExternalImages,
 		int $maxNestingLevel,
 		private readonly ?string $tocPlaceholderHtml,
@@ -136,6 +149,10 @@ final class MarkdownRenderer {
 		$environment->addRenderer( WikiLinkNode::class, new WikiLinkNodeRenderer( $this->pageLinkRenderer ) );
 		$environment->addRenderer( FileEmbedNode::class, new FileEmbedNodeRenderer( $this->fileEmbedRenderer ) );
 		$environment->addRenderer( TocPlaceholder::class, new TocPlaceholderRenderer() );
+		// Runs above league's default FencedCodeRenderer, but is a no-op unless the
+		// pipeline stashed highlighted HTML on the node, in which case it returns
+		// that; otherwise it returns null and the default renderer takes over.
+		$environment->addRenderer( FencedCode::class, new HighlightedCodeRenderer(), self::RENDERER_OVERRIDE_PRIORITY );
 		$environment->addRenderer(
 			Link::class,
 			new MarkdownLinkRenderer( $this->pageLinkRenderer, $this->externalUrlDetector, $noFollowExternalLinks ),
@@ -206,6 +223,10 @@ final class MarkdownRenderer {
 		$this->preloadFileLookups( $files, $generateHtml );
 		$sections = $this->processHeadings( $document );
 
+		// Only while rendering HTML: a metadata-only parse needs no highlighting,
+		// and skipping it avoids the highlighter's cost when the HTML is discarded.
+		$highlighted = $generateHtml && $this->highlightCodeBlocks( $document );
+
 		return new RenderedMarkdown(
 			html: $generateHtml ? $this->renderHtml( $document, $sections ) : '',
 			links: $links,
@@ -213,8 +234,48 @@ final class MarkdownRenderer {
 			files: $files,
 			sections: $sections,
 			externalLinks: $this->collectExternalLinks( $document ),
-			frontMatter: $frontMatter
+			frontMatter: $frontMatter,
+			modules: $highlighted ? $this->codeHighlighter->modules() : [],
+			styleModules: $highlighted ? $this->codeHighlighter->styleModules() : []
 		);
+	}
+
+	/**
+	 * Delegates each fenced block that has an info string to the code highlighter,
+	 * up to MAX_HIGHLIGHTED_BLOCKS_PER_RENDER attempts, and stashes each non-null
+	 * result on its node for HighlightedCodeRenderer to emit. Blocks with no info
+	 * string, blocks the highlighter declines, and every block past the cap keep
+	 * the default escaped rendering.
+	 *
+	 * @return bool Whether at least one block was highlighted, so the caller
+	 *   registers the highlighter's ResourceLoader modules only when they matter.
+	 */
+	private function highlightCodeBlocks( Document $document ): bool {
+		$attemptCount = 0;
+		$anyHighlighted = false;
+
+		foreach ( $this->nodesOfType( $document, FencedCode::class ) as $node ) {
+			$language = $node->getInfoWords()[0] ?? '';
+
+			if ( $language === '' ) {
+				continue;
+			}
+
+			if ( $attemptCount >= self::MAX_HIGHLIGHTED_BLOCKS_PER_RENDER ) {
+				break;
+			}
+
+			$attemptCount++;
+
+			$html = $this->codeHighlighter->highlight( $node->getLiteral(), $language );
+
+			if ( $html !== null ) {
+				$node->data->set( HighlightedCodeRenderer::HIGHLIGHTED_HTML_KEY, $html );
+				$anyHighlighted = true;
+			}
+		}
+
+		return $anyHighlighted;
 	}
 
 	/**
@@ -334,7 +395,9 @@ final class MarkdownRenderer {
 			files: [],
 			sections: [],
 			externalLinks: [],
-			frontMatter: null
+			frontMatter: null,
+			modules: [],
+			styleModules: []
 		);
 	}
 

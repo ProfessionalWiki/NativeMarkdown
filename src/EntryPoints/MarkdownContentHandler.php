@@ -142,6 +142,7 @@ final class MarkdownContentHandler extends TextContentHandler {
 		$this->registerFiles( $output, $rendered );
 		$this->registerExternalLinks( $output, $rendered );
 		$this->registerFrontMatter( $output, $rendered );
+		$this->registerModules( $output, $rendered );
 
 		if ( $templateExpander !== null ) {
 			$templateExpander->mergeInto( $output );
@@ -210,6 +211,16 @@ final class MarkdownContentHandler extends TextContentHandler {
 		if ( $rendered->frontMatter !== null ) {
 			$output->setExtensionData( self::FRONT_MATTER_DATA_KEY, $rendered->frontMatter );
 		}
+	}
+
+	/**
+	 * Loads the ResourceLoader modules the rendered HTML needs, such as the
+	 * syntax-highlighting styles for highlighted code blocks. Empty when the
+	 * render produced nothing that needs a module.
+	 */
+	private function registerModules( ParserOutput $output, RenderedMarkdown $rendered ): void {
+		$output->addModules( $rendered->modules );
+		$output->addModuleStyles( $rendered->styleModules );
 	}
 
 	/**

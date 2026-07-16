@@ -17,6 +17,10 @@
 		<!-- The extension's own vendor: portable across the dev env and CI, where
 		     league/commonmark is not merged into MediaWiki's vendor directory. -->
 		<directory name="vendor/league" />
+		<!-- Optional Extension:SyntaxHighlight, referenced by the Persistence
+		     adapter but not part of the scanned MediaWiki core. Cloned in CI;
+		     present in the dev env. -->
+		<directory name="../../extensions/SyntaxHighlight_GeSHi/includes" />
 	</extraFiles>
 	<issueHandlers>
 		<MissingPropertyType errorLevel="suppress" />

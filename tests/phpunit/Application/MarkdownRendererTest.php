@@ -5,12 +5,15 @@ declare( strict_types = 1 );
 namespace ProfessionalWiki\NativeMarkdown\Tests\Application;
 
 use PHPUnit\Framework\TestCase;
+use ProfessionalWiki\NativeMarkdown\Application\CodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
+use ProfessionalWiki\NativeMarkdown\Application\NoOpCodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Application\PageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Application\RenderedMarkdown;
 use ProfessionalWiki\NativeMarkdown\Application\Section;
 use ProfessionalWiki\NativeMarkdown\Application\TemplateExpander;
 use ProfessionalWiki\NativeMarkdown\Tests\FrontMatterBombs;
+use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeCodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeFileEmbedRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakePageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\FakeTemplateExpander;
@@ -22,6 +25,8 @@ use ProfessionalWiki\NativeMarkdown\Tests\TestDoubles\ThrowingPageLinkRenderer;
 /**
  * @covers \ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\RenderedMarkdown
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\NoOpCodeHighlighter
+ * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\HighlightedCodeRenderer
  * @covers \ProfessionalWiki\NativeMarkdown\Application\FileEmbed
  * @covers \ProfessionalWiki\NativeMarkdown\Application\HeadingAnchorBuilder
  * @covers \ProfessionalWiki\NativeMarkdown\Application\CommonMark\WikiLinkParser
@@ -51,12 +56,14 @@ class MarkdownRendererTest extends TestCase {
 		bool $allowExternalImages = false,
 		?PageLinkRenderer $pageLinkRenderer = null,
 		?string $tocPlaceholderHtml = null,
-		bool $templateTransclusion = false
+		bool $templateTransclusion = false,
+		?CodeHighlighter $codeHighlighter = null
 	): MarkdownRenderer {
 		return new MarkdownRenderer(
 			titleParser: new FakeWikiTitleParser(),
 			pageLinkRenderer: $pageLinkRenderer ?? new FakePageLinkRenderer(),
 			fileEmbedRenderer: new FakeFileEmbedRenderer(),
+			codeHighlighter: $codeHighlighter ?? new NoOpCodeHighlighter(),
 			allowExternalImages: $allowExternalImages,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: $tocPlaceholderHtml,
@@ -73,10 +80,16 @@ class MarkdownRendererTest extends TestCase {
 		bool $generateHtml = true,
 		?string $tocPlaceholderHtml = null,
 		bool $templateTransclusion = false,
-		?TemplateExpander $templateExpander = null
+		?TemplateExpander $templateExpander = null,
+		?CodeHighlighter $codeHighlighter = null
 	): RenderedMarkdown {
-		return $this->newRenderer( $allowExternalImages, $pageLinkRenderer, $tocPlaceholderHtml, $templateTransclusion )
-			->render( $markdown, $generateHtml, $templateExpander );
+		return $this->newRenderer(
+			$allowExternalImages,
+			$pageLinkRenderer,
+			$tocPlaceholderHtml,
+			$templateTransclusion,
+			$codeHighlighter
+		)->render( $markdown, $generateHtml, $templateExpander );
 	}
 
 	private function extractPlainText( string $markdown ): string {
@@ -649,6 +662,7 @@ class MarkdownRendererTest extends TestCase {
 			titleParser: new FakeWikiTitleParser(),
 			pageLinkRenderer: new FakePageLinkRenderer(),
 			fileEmbedRenderer: $fileEmbedRenderer,
+			codeHighlighter: new NoOpCodeHighlighter(),
 			allowExternalImages: false,
 			maxNestingLevel: 100,
 			tocPlaceholderHtml: null,
@@ -1283,6 +1297,130 @@ class MarkdownRendererTest extends TestCase {
 
 		$this->assertStringContainsString( '<div class="fake-expanded">{{T100}}</div>', $html );
 		$this->assertStringContainsString( '<p>{{T101}}</p>', $html );
+	}
+
+	public function testFencedCodeWithLanguageIsRenderedByTheHighlighter(): void {
+		$html = $this->render(
+			"```python\nprint('hi')\n```",
+			codeHighlighter: new FakeCodeHighlighter()
+		)->html;
+
+		$this->assertStringContainsString( '<div class="fake-highlight">HIGHLIGHTED</div>', $html );
+		$this->assertStringNotContainsString( '<code class="language-', $html );
+	}
+
+	public function testHighlighterDeclinedFencedCodeFallsBackToDefaultRendering(): void {
+		$html = $this->render(
+			"```python\nprint('hi')\n```",
+			codeHighlighter: new FakeCodeHighlighter( html: null )
+		)->html;
+
+		$this->assertStringContainsString( '<pre><code class="language-python">', $html );
+	}
+
+	public function testFencedCodeWithoutInfoStringIsNotHighlighted(): void {
+		$highlighter = new FakeCodeHighlighter();
+
+		$this->render( "```\nplain code\n```", codeHighlighter: $highlighter );
+
+		$this->assertSame( [], $highlighter->calls );
+	}
+
+	public function testIndentedCodeBlockIsNotHighlighted(): void {
+		$highlighter = new FakeCodeHighlighter();
+
+		$this->render( "    indented code line\n", codeHighlighter: $highlighter );
+
+		$this->assertSame( [], $highlighter->calls );
+	}
+
+	public function testFirstInfoWordIsPassedAsTheLanguage(): void {
+		$highlighter = new FakeCodeHighlighter();
+
+		$this->render( "```python line-numbers\ncode\n```", codeHighlighter: $highlighter );
+
+		$this->assertSame( 'python', $highlighter->calls[0]['language'] );
+	}
+
+	public function testFencedCodeLiteralIsPassedToTheHighlighter(): void {
+		$highlighter = new FakeCodeHighlighter();
+
+		$this->render( "```js\nconst x = 1;\n```", codeHighlighter: $highlighter );
+
+		$this->assertSame( "const x = 1;\n", $highlighter->calls[0]['code'] );
+	}
+
+	public function testMetadataOnlyRenderDoesNotHighlightCode(): void {
+		$highlighter = new FakeCodeHighlighter();
+
+		$this->render( "```python\nprint('hi')\n```", generateHtml: false, codeHighlighter: $highlighter );
+
+		$this->assertSame( [], $highlighter->calls );
+	}
+
+	public function testHighlighterModulesAreReportedWhenABlockIsHighlighted(): void {
+		$result = $this->render(
+			"```python\nprint('hi')\n```",
+			codeHighlighter: new FakeCodeHighlighter(
+				modules: [ 'ext.demo.view' ],
+				styleModules: [ 'ext.demo' ]
+			)
+		);
+
+		$this->assertSame( [ 'ext.demo.view' ], $result->modules );
+		$this->assertSame( [ 'ext.demo' ], $result->styleModules );
+	}
+
+	public function testNoModulesWhenDocumentHasNoHighlightableCode(): void {
+		$result = $this->render(
+			'Just a paragraph with no code.',
+			codeHighlighter: new FakeCodeHighlighter()
+		);
+
+		$this->assertSame( [], $result->modules );
+		$this->assertSame( [], $result->styleModules );
+	}
+
+	public function testNoModulesWhenEveryBlockDeclinesHighlighting(): void {
+		$result = $this->render(
+			"```python\nprint('hi')\n```",
+			codeHighlighter: new FakeCodeHighlighter( html: null )
+		);
+
+		$this->assertSame( [], $result->modules );
+		$this->assertSame( [], $result->styleModules );
+	}
+
+	/**
+	 * A stack of distinct fenced blocks ```lang1 .. ```lang$count, each with a
+	 * one-word language so every block is a highlight candidate.
+	 */
+	private function fencedCodeBlocks( int $count ): string {
+		return implode(
+			"\n\n",
+			array_map(
+				static fn ( int $number ) => "```lang$number\ncode $number\n```",
+				range( 1, $count )
+			)
+		);
+	}
+
+	public function testHighlightAttemptsAreCappedPerRender(): void {
+		$highlighter = new FakeCodeHighlighter();
+
+		$this->render( $this->fencedCodeBlocks( 101 ), codeHighlighter: $highlighter );
+
+		$this->assertCount( 100, $highlighter->calls );
+	}
+
+	public function testFencedBlockPastTheHighlightCapKeepsDefaultRendering(): void {
+		$html = $this->render(
+			$this->fencedCodeBlocks( 101 ),
+			codeHighlighter: new FakeCodeHighlighter()
+		)->html;
+
+		$this->assertStringNotContainsString( 'class="language-lang100"', $html );
+		$this->assertStringContainsString( 'class="language-lang101"', $html );
 	}
 
 }
