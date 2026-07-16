@@ -221,6 +221,14 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ## Release notes
 
+### Version 1.2.0 - Under development
+
+* Fenced code blocks whose info string names a language are now syntax highlighted, the same way a wikitext
+  `<syntaxhighlight>` block is. This needs the [SyntaxHighlight extension] (bundled with MediaWiki) to be
+  installed; without it, code blocks keep rendering as plain preformatted text
+* Code blocks no longer get a background pill behind each of their lines, which happened because skins style the
+  `code` element for inline use and CommonMark nests it inside `pre`
+
 ### Version 1.1.0 - 2026-07-09
 
 * Standard Markdown `[label](target)` links now resolve to wiki pages, the same as `[[target]]`: a target that
