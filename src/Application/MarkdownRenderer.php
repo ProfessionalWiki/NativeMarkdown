@@ -228,6 +228,10 @@ final class MarkdownRenderer {
 		// and skipping it avoids the highlighter's cost when the HTML is discarded.
 		$highlighted = $generateHtml && $this->highlightCodeBlocks( $document );
 
+		// Likewise HTML-only: a thumbnail's client-side module matters only once the
+		// thumbnail is actually rendered, which a metadata-only parse never does.
+		$rendersThumbnail = $generateHtml && $this->hasThumbnailEmbed( $files );
+
 		return new RenderedMarkdown(
 			html: $generateHtml ? $this->renderHtml( $document, $sections ) : '',
 			links: $links,
@@ -236,7 +240,10 @@ final class MarkdownRenderer {
 			sections: $sections,
 			externalLinks: $this->collectExternalLinks( $document ),
 			frontMatter: $frontMatter,
-			modules: $highlighted ? $this->codeHighlighter->modules() : [],
+			modules: array_merge(
+				$highlighted ? $this->codeHighlighter->modules() : [],
+				$rendersThumbnail ? $this->fileEmbedRenderer->modules() : []
+			),
 			styleModules: $highlighted ? $this->codeHighlighter->styleModules() : []
 		);
 	}
@@ -277,6 +284,19 @@ final class MarkdownRenderer {
 		}
 
 		return $anyHighlighted;
+	}
+
+	/**
+	 * @param FileEmbed[] $files
+	 */
+	private function hasThumbnailEmbed( array $files ): bool {
+		foreach ( $files as $embed ) {
+			if ( $embed->thumbnail ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

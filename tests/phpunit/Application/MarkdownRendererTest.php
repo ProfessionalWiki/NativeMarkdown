@@ -1410,6 +1410,33 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertSame( [], $result->styleModules );
 	}
 
+	public function testEmbeddedThumbnailReportsTheFileRenderersMediaModules(): void {
+		$result = $this->render( '[[File:Cat.png|thumb]]' );
+
+		$this->assertSame( [ 'test.file.media' ], $result->modules );
+	}
+
+	public function testInlineEmbedReportsNoMediaModules(): void {
+		$result = $this->render( '[[File:Cat.png]]' );
+
+		$this->assertSame( [], $result->modules );
+	}
+
+	public function testMetadataOnlyRenderReportsNoMediaModules(): void {
+		$result = $this->render( '[[File:Cat.png|thumb]]', generateHtml: false );
+
+		$this->assertSame( [], $result->modules );
+	}
+
+	public function testThumbnailAndHighlightedCodeReportBothModuleSets(): void {
+		$result = $this->render(
+			"[[File:Cat.png|thumb]]\n\n```python\nx\n```",
+			codeHighlighter: new FakeCodeHighlighter( modules: [ 'ext.demo.view' ] )
+		);
+
+		$this->assertSame( [ 'ext.demo.view', 'test.file.media' ], $result->modules );
+	}
+
 	/**
 	 * A stack of distinct fenced blocks ```lang1 .. ```lang$count, each with a
 	 * one-word language so every block is a highlight candidate.

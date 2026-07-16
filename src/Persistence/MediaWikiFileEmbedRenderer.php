@@ -47,6 +47,14 @@ final class MediaWikiFileEmbedRenderer implements FileEmbedRenderer {
 		}
 	}
 
+	/**
+	 * Core's Linker registers this for a thumbnail only when passed a Parser, which
+	 * the ContentHandler render path has none of, so the caller adds it instead.
+	 */
+	public function modules(): array {
+		return [ 'mediawiki.page.media' ];
+	}
+
 	public function renderEmbed( FileEmbed $embed ): string {
 		$file = $this->findFile( $embed->title->dbKey );
 
