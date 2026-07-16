@@ -544,6 +544,25 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertSame( [], $result->links );
 	}
 
+	public function testStandaloneThumbnailEmbedIsNotWrappedInParagraph(): void {
+		$html = $this->render( '[[File:Cat.png|thumb|A cat]]' )->html;
+
+		$this->assertStringContainsString( 'data-fake-file="Cat.png"', $html );
+		$this->assertStringNotContainsString( '<p>', $html );
+	}
+
+	public function testSolitaryInlineEmbedStaysWrappedInParagraph(): void {
+		$html = $this->render( '[[File:Cat.png|A cat]]' )->html;
+
+		$this->assertStringContainsString( '<p><img data-fake-file="Cat.png"', $html );
+	}
+
+	public function testThumbnailEmbedWithSurroundingTextStaysInParagraph(): void {
+		$html = $this->render( 'Look: [[File:Cat.png|thumb|A cat]]' )->html;
+
+		$this->assertStringContainsString( '<p>Look: <img data-fake-file="Cat.png"', $html );
+	}
+
 	public function testColonPrefixedFileRendersPageLinkInsteadOfEmbedding(): void {
 		$result = $this->render( '[[:File:Cat.png]]' );
 
