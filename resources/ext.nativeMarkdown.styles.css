@@ -1,0 +1,9 @@
+/* Skins style the bare `code` element for inline code (background, border,
+   padding). CommonMark nests `code` inside `pre` for fenced code blocks, a
+   combination wikitext never produces, so that inline styling paints a pill
+   per line there. Reset it; the `pre` container provides the block styling. */
+.mw-parser-output pre > code {
+	background-color: transparent;
+	border: 0;
+	padding: 0;
+}

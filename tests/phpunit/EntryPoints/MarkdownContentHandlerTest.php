@@ -34,6 +34,12 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( '<strong>bold</strong>', $output->getRawText() );
 	}
 
+	public function testAddsCodeBlockStyleModule(): void {
+		$output = $this->getParserOutput( "```python\nprint(42)\n```" );
+
+		$this->assertContains( 'ext.nativeMarkdown.styles', $output->getModuleStyles() );
+	}
+
 	public function testRegistersInternalLinks(): void {
 		$output = $this->getParserOutput( 'See [[Linked Page]] and [[Another One|label]]' );
 

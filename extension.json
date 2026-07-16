@@ -40,6 +40,17 @@
 		"CodeEditorGetPageLanguage": "ProfessionalWiki\\NativeMarkdown\\EntryPoints\\NativeMarkdownHooks::onCodeEditorGetPageLanguage"
 	},
 
+	"ResourceFileModulePaths": {
+		"localBasePath": "resources",
+		"remoteExtPath": "NativeMarkdown"
+	},
+
+	"ResourceModules": {
+		"ext.nativeMarkdown.styles": {
+			"styles": [ "ext.nativeMarkdown.styles.css" ]
+		}
+	},
+
 	"config": {
 		"NativeMarkdownNamespaces": {
 			"description": "Namespaces (IDs) in which new pages default to the markdown content model.",

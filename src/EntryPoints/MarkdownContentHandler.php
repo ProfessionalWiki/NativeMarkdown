@@ -136,6 +136,7 @@ final class MarkdownContentHandler extends TextContentHandler {
 		);
 
 		$output->setFromParserOptions( $cpoParams->getParserOptions() );
+		$output->addModuleStyles( [ 'ext.nativeMarkdown.styles' ] );
 
 		$this->registerLinks( $output, $rendered );
 		$this->registerCategories( $output, $rendered );
