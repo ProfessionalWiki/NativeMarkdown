@@ -256,6 +256,8 @@ Initial release for MediaWiki 1.43+ with these features:
 * `action=raw` / REST return the stored Markdown byte for byte, built for AI agents and git round-trips
 * CodeEditor syntax highlighting on Markdown pages
 
+Initial release announcement: https://professional.wiki/en/news/native-markdown-released
+
 [MediaWiki]: https://www.mediawiki.org
 [Professional Wiki]: https://professional.wiki
 [MediaWiki Development]: https://professional.wiki/en/mediawiki-development
