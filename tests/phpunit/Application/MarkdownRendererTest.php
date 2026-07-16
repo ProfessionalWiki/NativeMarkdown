@@ -563,6 +563,14 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertStringContainsString( '<p>Look: <img data-fake-file="Cat.png"', $html );
 	}
 
+	public function testParagraphWithTwoThumbnailEmbedsKeepsBothWrapped(): void {
+		$html = $this->render( "[[File:Cat.png|thumb|First]]\n[[File:Dog.png|thumb|Second]]" )->html;
+
+		$this->assertStringContainsString( '<p>', $html );
+		$this->assertStringContainsString( 'data-fake-file="Cat.png"', $html );
+		$this->assertStringContainsString( 'data-fake-file="Dog.png"', $html );
+	}
+
 	public function testColonPrefixedFileRendersPageLinkInsteadOfEmbedding(): void {
 		$result = $this->render( '[[:File:Cat.png]]' );
 
