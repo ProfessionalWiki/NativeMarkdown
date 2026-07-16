@@ -27,7 +27,7 @@ final class MarkdownContentHandler extends TextContentHandler {
 
 	private const FRONT_MATTER_DATA_KEY = 'nativemarkdown-front-matter';
 
-	private const CONTENT_STYLES_MODULE = 'ext.nativeMarkdown.content';
+	private const CONTENT_STYLES_MODULE = 'ext.nativeMarkdown.styles';
 
 	// Matches the threshold used by the wikitext parser ("enough" headings for a ToC).
 	private const TOC_SECTION_THRESHOLD = 4;

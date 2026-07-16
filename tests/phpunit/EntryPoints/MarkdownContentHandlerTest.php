@@ -222,7 +222,7 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 	public function testMarkdownPageLoadsContentStyles(): void {
 		$output = $this->getParserOutput( 'Just some prose, without a code block in sight.' );
 
-		$this->assertContains( 'ext.nativeMarkdown.content', $output->getModuleStyles() );
+		$this->assertContains( 'ext.nativeMarkdown.styles', $output->getModuleStyles() );
 	}
 
 	public function testFencedCodeBlockWithLanguageIsSyntaxHighlighted(): void {

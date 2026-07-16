@@ -27,13 +27,13 @@
 	},
 
 	"ResourceFileModulePaths": {
-		"localBasePath": "modules",
-		"remoteExtPath": "NativeMarkdown/modules"
+		"localBasePath": "resources",
+		"remoteExtPath": "NativeMarkdown/resources"
 	},
 
 	"ResourceModules": {
-		"ext.nativeMarkdown.content": {
-			"styles": "ext.nativeMarkdown.content.css"
+		"ext.nativeMarkdown.styles": {
+			"styles": "ext.nativeMarkdown.styles.css"
 		}
 	},
 
