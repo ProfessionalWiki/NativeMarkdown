@@ -106,6 +106,35 @@ wiki-wide mode — it also applies inside Talk namespaces, where a Markdown talk
 signatures or threading. It still skips the Template and MediaWiki namespaces, where Markdown can act as
 neither a template nor an interface message; add those to `$wgNativeMarkdownNamespaces` to opt them in anyway.
 
+### Converting existing pages
+
+Those defaults apply at page creation only, so enabling suffix detection or adding a namespace never touches
+pages that already exist. The `NativeMarkdown:ConvertToMarkdownModel` maintenance script is the retroactive
+counterpart: it switches existing pages to the Markdown model using the very same rules. It changes the
+content model, not the page text — the stored wikitext is then reinterpreted as Markdown and may render
+differently — so always start with `--dry-run` to review what would be converted.
+
+Two combinable selectors choose the pages, at least one being required:
+
+* `--md-suffix` follows live `.md` suffix detection: titles ending in `.md`, in any namespace except Template
+  and MediaWiki (Talk included).
+* `--namespace <id>` follows `$wgNativeMarkdownNamespaces`: every page in that namespace. An explicit
+  namespace is a deliberate choice, so it works for any namespace, Template and MediaWiki included.
+
+Combined, they narrow to the `.md`-titled pages inside that one namespace, so `--md-suffix --namespace 10`
+converts the `.md` pages in the Template namespace that `--md-suffix` alone would skip. Only pages whose
+current model is wikitext are ever converted; other models are left untouched, and redirects are skipped. Use
+`--batch-size` to control how many pages each batch processes.
+
+```shell script
+php maintenance/run.php NativeMarkdown:ConvertToMarkdownModel --md-suffix --dry-run
+php maintenance/run.php NativeMarkdown:ConvertToMarkdownModel --namespace 3000
+php maintenance/run.php NativeMarkdown:ConvertToMarkdownModel --md-suffix --namespace 10
+```
+
+Each conversion is an ordinary revision by the maintenance user, visible in page history, and reversible per
+page with `Special:ChangeContentModel` — still the tool for one-off, two-way model changes.
+
 ## Templates and parser functions
 
 Markdown pages can use MediaWiki's `{{...}}` syntax. Because expansion delegates to the wikitext parser, this
@@ -223,6 +252,9 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ### Version 1.2.0 - Under development
 
+* A `ConvertToMarkdownModel` maintenance script converts existing wikitext pages to the Markdown content
+  model, selecting them by `.md` suffix and/or namespace, the same way the activation settings select new
+  pages. It changes the content model rather than the page text, skips redirects, and supports `--dry-run`
 * Fenced code blocks whose info string names a language are now syntax highlighted, the same way a wikitext
   `<syntaxhighlight>` block is. This needs the [SyntaxHighlight extension] (bundled with MediaWiki) to be
   installed; without it, code blocks keep rendering as plain preformatted text

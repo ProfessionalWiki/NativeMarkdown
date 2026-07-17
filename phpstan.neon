@@ -2,9 +2,11 @@ parameters:
 	level: 5
 	paths:
 		- src
+		- maintenance
 		- tests
 	scanDirectories:
 		- ../../includes
+		- ../../maintenance/includes
 		- ../../tests/phpunit
 		- ../../vendor
 		# Optional Extension:SyntaxHighlight, referenced by the Persistence adapter
@@ -14,3 +16,9 @@ parameters:
 	bootstrapFiles:
 		- ../../includes/AutoLoader.php
 	treatPhpDocTypesAsCertain: false
+	ignoreErrors:
+		# RUN_MAINTENANCE_IF_MAIN is defined at runtime in maintenance/Maintenance.php, behind a
+		# defined() guard phpstan cannot resolve. It is the standard maintenance entry point constant.
+		-
+			message: '#^Constant RUN_MAINTENANCE_IF_MAIN not found\.$#'
+			path: maintenance/ConvertToMarkdownModel.php

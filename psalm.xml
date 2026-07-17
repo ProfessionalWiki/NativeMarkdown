@@ -10,9 +10,11 @@
 >
 	<projectFiles>
 		<directory name="src" />
+		<directory name="maintenance" />
 	</projectFiles>
 	<extraFiles>
 		<directory name="../../includes" />
+		<directory name="../../maintenance/includes" />
 		<directory name="../../vendor/wikimedia" />
 		<!-- The extension's own vendor: portable across the dev env and CI, where
 		     league/commonmark is not merged into MediaWiki's vendor directory. -->
@@ -50,5 +52,22 @@
 				<directory name="../../includes" />
 			</errorLevel>
 		</MixedArgument>
+		<!-- The Maintenance base class uses reference assignments and deprecated internal
+		     properties in its own constructor, which we neither own nor touch. -->
+		<UnsupportedReferenceUsage>
+			<errorLevel type="suppress">
+				<directory name="../../maintenance/includes" />
+			</errorLevel>
+		</UnsupportedReferenceUsage>
+		<DeprecatedProperty>
+			<errorLevel type="suppress">
+				<directory name="../../maintenance/includes" />
+			</errorLevel>
+		</DeprecatedProperty>
+		<MixedAssignment>
+			<errorLevel type="suppress">
+				<directory name="../../maintenance/includes" />
+			</errorLevel>
+		</MixedAssignment>
 	</issueHandlers>
 </psalm>
