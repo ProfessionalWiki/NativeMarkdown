@@ -270,5 +270,5 @@ Initial release announcement: https://professional.wiki/en/news/native-markdown-
 [ExternalContent extension]: https://github.com/ProfessionalWiki/ExternalContent
 [configuration documentation]: https://professional.wiki/en/extension/native-markdown#Configuration
 [usage documentation]: https://professional.wiki/en/extension/native-markdown#Usage
-[template documentation]: https://professional.wiki/en/extension/native-markdown#Usage
+[template documentation]: https://professional.wiki/en/extension/native-markdown#templates
 [full comparison]: https://professional.wiki/en/extension/native-markdown#Comparison-with-other-Markdown-extensions
