@@ -10,7 +10,8 @@ use ProfessionalWiki\NativeMarkdown\Application\WikiTitleParser;
 /**
  * Pure-PHP stand-in for the MediaWiki TitleParser adapter. Understands just enough
  * title syntax for the pipeline tests: Category:/File: prefixes (case-insensitive,
- * like MediaWiki), the "wikipedia" interwiki prefix, #fragments, and rejection of
+ * like MediaWiki), the "wikipedia" interwiki prefix, #fragments, first-letter
+ * capitalization (MediaWiki's $wgCapitalLinks default), and rejection of
  * characters MediaWiki considers invalid in titles.
  */
 final class FakeWikiTitleParser implements WikiTitleParser {
@@ -48,6 +49,7 @@ final class FakeWikiTitleParser implements WikiTitleParser {
 		}
 
 		[ $namespace, $prefix, $text ] = $this->splitNamespace( $pageText );
+		$text = $this->capitalizeFirst( $text );
 
 		return new WikiTitle(
 			namespace: $namespace,
@@ -82,6 +84,14 @@ final class FakeWikiTitleParser implements WikiTitleParser {
 		}
 
 		return [ self::MAIN_NAMESPACE, '', $pageText ];
+	}
+
+	private function capitalizeFirst( string $text ): string {
+		if ( $text === '' ) {
+			return '';
+		}
+
+		return mb_strtoupper( mb_substr( $text, 0, 1 ) ) . mb_substr( $text, 1 );
 	}
 
 }

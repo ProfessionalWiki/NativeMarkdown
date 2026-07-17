@@ -409,6 +409,55 @@ class MarkdownRendererTest extends TestCase {
 		$this->assertSame( 'Some Page', $result->links[0]->prefixedText );
 	}
 
+	public function testPipelessWikiLinkDisplaysTypedTextNotNormalizedTitle(): void {
+		$result = $this->render( 'See [[page]] here' );
+
+		$this->assertSame(
+			"<p>See <a href=\"/wiki/Page\">page</a> here</p>\n",
+			$result->html
+		);
+		$this->assertSame( 'Page', $result->links[0]->prefixedText );
+	}
+
+	public function testPipelessWikiLinkKeepsTypedTextWithFragment(): void {
+		$result = $this->render( '[[page#section]]' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Page#section\">page#section</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( 'section', $result->links[0]->fragment );
+	}
+
+	public function testColonPrefixedCategoryLinkUsesTypedTextWithoutLeadingColon(): void {
+		$result = $this->render( '[[:Category:some category]]' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/Category:Some category\">Category:some category</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( [], $result->categories );
+		$this->assertCount( 1, $result->links );
+	}
+
+	public function testColonPrefixedFileLinkUsesTypedTextWithoutLeadingColon(): void {
+		$result = $this->render( '[[:File:some file.png]]' );
+
+		$this->assertSame(
+			"<p><a href=\"/wiki/File:Some file.png\">File:some file.png</a></p>\n",
+			$result->html
+		);
+		$this->assertSame( [], $result->files );
+		$this->assertCount( 1, $result->links );
+	}
+
+	public function testPipedWikiLinkUsesLabelNotTypedTarget(): void {
+		$this->assertSame(
+			"<p><a href=\"/wiki/Page\">Label</a></p>\n",
+			$this->render( '[[page|Label]]' )->html
+		);
+	}
+
 	public function testWikiLinkWithLabelUsesLabel(): void {
 		$this->assertSame(
 			"<p><a href=\"/wiki/Some Page\">the label</a></p>\n",

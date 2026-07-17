@@ -42,6 +42,13 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 		$this->assertArrayHasKey( 'Another_One', $output->getLinks()[NS_MAIN] );
 	}
 
+	public function testPipelessLinkDisplaysTypedTextWhileRegisteringNormalizedTitle(): void {
+		$output = $this->getParserOutput( 'See [[phase one matrix]] here' );
+
+		$this->assertStringContainsString( '>phase one matrix</a>', $output->getRawText() );
+		$this->assertArrayHasKey( 'Phase_one_matrix', $output->getLinks()[NS_MAIN] );
+	}
+
 	public function testRendersMissingPageAsRedLink(): void {
 		$output = $this->getParserOutput( '[[Surely This Page Is Missing]]' );
 
