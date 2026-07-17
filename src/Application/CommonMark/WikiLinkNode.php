@@ -24,13 +24,14 @@ final class WikiLinkNode extends AbstractInline {
 		parent::__construct();
 	}
 
+	/**
+	 * Pipe-less links keep the target text exactly as typed (colon-stripped and
+	 * trimmed by the parser), matching how MediaWiki wikitext and Obsidian render
+	 * them. The resolved title drives the href and link registration, not the label.
+	 */
 	public function displayLabel(): string {
 		if ( $this->label !== null && $this->label !== '' ) {
 			return $this->label;
-		}
-
-		if ( $this->resolvedTitle !== null ) {
-			return $this->resolvedTitle->textWithFragment();
 		}
 
 		return $this->target;
