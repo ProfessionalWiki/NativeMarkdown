@@ -250,7 +250,7 @@ php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 
 ## Release notes
 
-### Version 1.2.0 - Under development
+### Version 1.2.0 - 2026-07-17
 
 * A `ConvertToMarkdownModel` maintenance script converts existing wikitext pages to the Markdown content
   model, selecting them by `.md` suffix and/or namespace, the same way the activation settings select new
