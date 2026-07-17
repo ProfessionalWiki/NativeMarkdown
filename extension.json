@@ -39,6 +39,7 @@
 
 	"AutoloadNamespaces": {
 		"ProfessionalWiki\\NativeMarkdown\\": "src/",
+		"ProfessionalWiki\\NativeMarkdown\\Maintenance\\": "maintenance/",
 		"ProfessionalWiki\\NativeMarkdown\\Tests\\": "tests/phpunit/"
 	},
 
