@@ -94,46 +94,28 @@ wikitext and Markdown (in both directions) via `Special:ChangeContentModel`.
 | `$wgNativeMarkdownAllowExternalImages` | `false` | Embed external `![alt](url)` images; when off they render as plain links |
 | `$wgNativeMarkdownWikitextExpansion` | `true` | Run `{{...}}` on Markdown pages through the MediaWiki parser: templates, parser functions, magic words, and Lua modules. Set to `false` to leave `{{...}}` as literal text (see [Templates and parser functions](#templates-and-parser-functions)) |
 
-`$wgNativeMarkdownEverywhere` covers the whole prose wiki, but deliberately leaves some pages as wikitext: the
-discussion (Talk) namespaces, where signatures and threading depend on wikitext; the Template and MediaWiki
-namespaces; and any namespace whose content model is explicitly configured elsewhere (for example a Scribunto
-or JSON namespace). Titles ending in `.css`, `.js` or `.json` never default to Markdown either, since MediaWiki
-reserves those for code pages. External links honor the core `$wgNoFollowLinks` setting. Input size is bounded
-by core's `$wgMaxArticleSize`.
-
-`$wgNativeMarkdownSuffixDetection` reads the `.md` suffix as a deliberate per-page choice, so — unlike the
-wiki-wide mode — it also applies inside Talk namespaces, where a Markdown talk page then has no wikitext
-signatures or threading. It still skips the Template and MediaWiki namespaces, where Markdown can act as
-neither a template nor an interface message; add those to `$wgNativeMarkdownNamespaces` to opt them in anyway.
+`$wgNativeMarkdownEverywhere` covers the whole prose wiki but deliberately leaves some pages as wikitext:
+the discussion (Talk), Template, and MediaWiki namespaces, namespaces whose content model is explicitly
+configured elsewhere, and titles ending in `.css`, `.js` or `.json`. `$wgNativeMarkdownSuffixDetection` reads
+the `.md` suffix as a deliberate per-page choice, so it also applies inside Talk namespaces. The
+[configuration documentation] covers the exact semantics of both.
 
 ### Converting existing pages
 
 Those defaults apply at page creation only, so enabling suffix detection or adding a namespace never touches
 pages that already exist. The `NativeMarkdown:ConvertToMarkdownModel` maintenance script is the retroactive
-counterpart: it switches existing pages to the Markdown model using the very same rules. It changes the
+counterpart: it switches existing wikitext pages to the Markdown model using the very same rules, selecting
+pages via `--md-suffix` and/or `--namespace <id>` (combinable, at least one being required). It changes the
 content model, not the page text — the stored wikitext is then reinterpreted as Markdown and may render
-differently — so always start with `--dry-run` to review what would be converted.
-
-Two combinable selectors choose the pages, at least one being required:
-
-* `--md-suffix` follows live `.md` suffix detection: titles ending in `.md`, in any namespace except Template
-  and MediaWiki (Talk included).
-* `--namespace <id>` follows `$wgNativeMarkdownNamespaces`: every page in that namespace. An explicit
-  namespace is a deliberate choice, so it works for any namespace, Template and MediaWiki included.
-
-Combined, they narrow to the `.md`-titled pages inside that one namespace, so `--md-suffix --namespace 10`
-converts the `.md` pages in the Template namespace that `--md-suffix` alone would skip. Only pages whose
-current model is wikitext are ever converted; other models are left untouched, and redirects are skipped. Use
-`--batch-size` to control how many pages each batch processes.
+differently — so always start with `--dry-run`. Redirects are skipped, `--batch-size` controls how many pages
+each batch processes, and each conversion is an ordinary revision, reversible per page with
+`Special:ChangeContentModel`. The [configuration documentation] covers the exact selector semantics.
 
 ```shell script
 php maintenance/run.php NativeMarkdown:ConvertToMarkdownModel --md-suffix --dry-run
 php maintenance/run.php NativeMarkdown:ConvertToMarkdownModel --namespace 3000
 php maintenance/run.php NativeMarkdown:ConvertToMarkdownModel --md-suffix --namespace 10
 ```
-
-Each conversion is an ordinary revision by the maintenance user, visible in page history, and reversible per
-page with `Special:ChangeContentModel` — still the tool for one-off, two-way model changes.
 
 ## Templates and parser functions
 
@@ -152,31 +134,11 @@ and, where [Scribunto] is installed, Lua modules via `{{#invoke:}}`. Set
 Ada Lovelace was an English **mathematician**, regarded as the first computer programmer.
 ```
 
-Because it is the real parser, the same trust and resource model as wikitext applies: template dependencies are
-tracked (editing a template reparses the pages that transclude it), recursion and size limits apply, and output
-is sanitized exactly as wikitext is. Enabling `{{...}}` on a Markdown page grants the same capabilities a
-wikitext page has, so on a wiki with untrusted editors, weigh it the same way you weigh wikitext templates,
-parser functions and Lua.
-
-Placement follows the split between block and inline content:
-
-- A call on its **own line** produces block output, so an infobox table renders as a block rather than being
-  wrapped in a paragraph. It may span multiple lines, including blank parameter lines, until the braces balance.
-- A call **within a line** of text renders inline and must stay on a single line; multi-line calls have to
-  start on their own line.
-- Template arguments are wikitext, not Markdown. Inside a GFM table cell, escape argument pipes as `\|`. Write
-  `\{\{` to keep braces literal.
-- A block call with no closing `}}` is rendered as literal text through to the end of the page (Markdown
-  parsing cannot backtrack), so a forgotten brace shows up as visible braces to fix rather than a silent error.
-
-Out of scope in this version, by design:
-
-- `<ref>...</ref>` and `<references/>` in the Markdown body (these are tags, not `{{...}}`), and citation
-  state is not shared across separate calls on a page.
-- Transcluding another **Markdown** page with `{{:Page}}`: its source would be reinterpreted as wikitext, so
-  transclude wikitext pages instead. `subst:` does not substitute on save.
-- Enabling the setting does not reparse existing pages; they show template output once edited or purged. Run
-  `refreshLinks.php` to populate the template links eagerly.
+Because it is the real parser, the same trust and resource model as wikitext applies: template dependencies
+are tracked, recursion and size limits apply, output is sanitized exactly as wikitext is, and enabling
+`{{...}}` grants a Markdown page the same capabilities a wikitext page has. Notably out of scope in this
+version: `<ref>` tags and transcluding Markdown pages with `{{:Page}}`. The [template documentation] covers
+the placement rules (block versus inline calls, escaping) and the full scope notes.
 
 ## For AI agents and LLMs
 
@@ -207,28 +169,21 @@ directly writable by an agent, with no lossy conversion step in either direction
   rendered with full wiki integration on read.
 
 Because the round trip is lossless, an agent can fetch a page as Markdown, edit it, and write it back without
-the content drifting through a wikitext translation. Full-text search indexes the rendered prose (not the raw
-markup), so an agent's keyword lookups match what a reader sees rather than `#` and `**` noise.
-
-Links work the way a model already writes them: a plain `[label](Page Name)` link whose target is a page name
-rather than a URL resolves to an internal wiki link — red/blue styled and recorded in the link tables, the same
-as `[[Page Name]]`. Real URLs stay external links. Multi-word targets work directly, spaces and all
-(`[getting started](Help:Getting Started)`), so a model does not have to know to write underscores.
+the content drifting through a wikitext translation. Links work the way a model already writes them: a plain
+`[label](Page Name)` link whose target names a page resolves to an internal wiki link, spaces and all. The
+[usage documentation] covers link resolution and search indexing in detail.
 
 ## Comparison with other Markdown extensions
 
 Native Markdown exists because no maintained extension makes Markdown a native content model:
 
 - **[Extension:WikiMarkdown]** embeds Markdown blocks inside wikitext pages via a tag, plus a shallow `.md`
-  content handler on top of Parsedown. Inside the Markdown there are no working `[[wiki links]]`, no category
-  assignment and no MediaWiki table of contents. Native Markdown makes the whole page Markdown, with links,
-  categories, ToC, search and link tables behaving like they do on wikitext pages.
-- **[Extension:Markdown]** is archived and points visitors to WikiMarkdown.
-- **[MarkdownExtraParser]** has been unmaintained for over a decade.
+  content handler with no working `[[wiki links]]`, categories, or table of contents inside the Markdown.
+- **[Extension:Markdown]** is archived, and [MarkdownExtraParser] has been unmaintained for over a decade.
 
-Related but different: our [ExternalContent extension] embeds Markdown *files from external sources* (like
-GitHub) into wikitext pages, while Native Markdown is for the wiki's own pages being Markdown. They compose
-nicely.
+See the [full comparison] on our website for more detail. Related but different: our
+[ExternalContent extension] embeds Markdown *files from external sources* (like GitHub) into wikitext pages,
+while Native Markdown is for the wiki's own pages being Markdown. They compose nicely.
 
 ## Development
 
@@ -313,3 +268,7 @@ Initial release announcement: https://professional.wiki/en/news/native-markdown-
 [Extension:Markdown]: https://www.mediawiki.org/wiki/Extension:Markdown
 [MarkdownExtraParser]: https://www.mediawiki.org/wiki/Extension:MarkdownExtraParser
 [ExternalContent extension]: https://github.com/ProfessionalWiki/ExternalContent
+[configuration documentation]: https://professional.wiki/en/extension/native-markdown#Configuration
+[usage documentation]: https://professional.wiki/en/extension/native-markdown#Usage
+[template documentation]: https://professional.wiki/en/extension/native-markdown#Usage
+[full comparison]: https://professional.wiki/en/extension/native-markdown#Comparison-with-other-Markdown-extensions
