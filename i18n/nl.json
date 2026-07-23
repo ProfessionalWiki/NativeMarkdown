@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Siebrand"
+		]
+	},
+	"nativemarkdown-description": "Maakt van Markdown een native contentmodel met eersteklas wiki-integratie: interne koppelingen, categorieën, inhoudsopgave en zoekfunctie",
+	"content-model-markdown": "Markdown"
+}

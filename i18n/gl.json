@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Toliño"
+		]
+	},
+	"nativemarkdown-description": "Converte Markdown nun modelo de contido nativo con integración wiki de primeira clase: ligazóns internas, categorías, índice e busca",
+	"content-model-markdown": "Markdown"
+}

@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"GuoPC"
+		]
+	},
+	"nativemarkdown-description": "使Markdown作为原生内容模型，并获得卓越的wiki集成：内部链接、分类、目录和搜索",
+	"content-model-markdown": "Markdown"
+}
