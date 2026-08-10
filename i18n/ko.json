@@ -1,0 +1,10 @@
+{
+	"@metadata": {
+		"authors": [
+			"Suleiman the Magnificent Television",
+			"Tensama0415"
+		]
+	},
+	"nativemarkdown-description": "Markdown을 기본 콘텐츠 모델로 사용하고, 내부 링크, 분류, 목차 및 검색과 같은 뛰어난 위키 통합 기능을 활용하세요.",
+	"content-model-markdown": "마크다운"
+}

@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Bjankuloski06"
+		]
+	},
+	"nativemarkdown-description": "Го прави Markdown матичен содржински модел со првокласно вклопување во вики: внатрешни врски, категорија, преглед на содржина и пребарување",
+	"content-model-markdown": "Markdown"
+}
