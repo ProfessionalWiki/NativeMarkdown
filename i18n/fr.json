@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Wladek92"
+		]
+	},
+	"nativemarkdown-description": "Fait de Markdown un modèle de contenu natif avec l'intégration de première classe des wikis : les liens internes, les catégories, la table des matières et la recherche",
+	"content-model-markdown": "Markdown"
+}
