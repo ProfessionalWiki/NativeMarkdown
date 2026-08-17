@@ -40,7 +40,7 @@
 		"phpunit/phpunit": "^9.6",
 		"vimeo/psalm": "^6.0",
 		"phpstan/phpstan": "^2.1",
-		"mediawiki/mediawiki-codesniffer": "^47.0"
+		"mediawiki/mediawiki-codesniffer": "^52.0"
 	},
 	"scripts": {
 		"test": "phpunit --testsuite Unit",

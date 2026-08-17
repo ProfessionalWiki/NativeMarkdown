@@ -117,8 +117,12 @@ jobs:
         with:
           path: extension
 
+      # mediawiki-codesniffer needs PHP 8.3, while this job also runs on the minimum
+      # supported 8.1. Only PHPUnit is needed here, so drop the sniffer first.
       - name: Composer update
-        run: composer update --no-progress --no-interaction --prefer-dist
+        run: |
+          composer remove --dev --no-update mediawiki/mediawiki-codesniffer
+          composer update --no-progress --no-interaction --prefer-dist
 
       - name: Run pure pipeline tests
         run: vendor/bin/phpunit --testsuite Unit
