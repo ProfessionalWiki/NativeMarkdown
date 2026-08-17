@@ -10,6 +10,7 @@
 		<exclude name="MediaWiki.Commenting.PropertyDocumentation" />
 		<exclude name="MediaWiki.Commenting.FunctionAnnotations.UnrecognizedAnnotation" />
 		<exclude name="MediaWiki.Commenting.FunctionAnnotations.NonNormalizedAnnotation" />
+		<exclude name="MediaWiki.Commenting.PropertyAnnotations.UnrecognizedAnnotation" />
 		<exclude name="MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment" />
 		<exclude name="MediaWiki.WhiteSpace.DisallowEmptyLineFunctions.NoEmptyLine" />
 		<exclude name="MediaWiki.WhiteSpace.SpaceAfterClosure.NoWhitespaceAfterClosure" />
