@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Wizzard"
+		]
+	},
+	"nativemarkdown-description": "Robí z Markdownu natívny model obsahu s plnou integráciou do wiki: interné odkazy, kategórie, obsah a vyhľadávanie",
+	"content-model-markdown": "Markdown"
+}
