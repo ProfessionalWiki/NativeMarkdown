@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Eleassar"
+		]
+	},
+	"nativemarkdown-description": "Naredi Markdown izvorni vsebinski model s prvovrstno integracijo vikijev: notranje povezave, kategorije, vsebinsko kazalo in iskanje",
+	"content-model-markdown": "Markdown"
+}
