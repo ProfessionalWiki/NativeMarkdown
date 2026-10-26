@@ -52,7 +52,7 @@ class MediaWikiFileEmbedRendererTest extends MediaWikiIntegrationTestCase {
 		$html = $this->renderEmbed( $this->newFileRenderingThumbnails() );
 
 		$this->assertStringContainsString( 'srcset', $html );
-		$this->assertStringContainsString( '450px-Chart.png', $html );
+		$this->assertStringContainsString( '600px-Chart.png 2x', $html );
 	}
 
 	public function testThumbnailRendersFramedFigureWithVisibleCaption(): void {

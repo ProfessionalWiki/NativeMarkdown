@@ -4,11 +4,13 @@ declare( strict_types = 1 );
 
 namespace ProfessionalWiki\NativeMarkdown;
 
+use Closure;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\PageReference;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Registration\ExtensionRegistry;
+use MediaWiki\SyntaxHighlight\SyntaxHighlight;
 use ProfessionalWiki\NativeMarkdown\Application\CodeHighlighter;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownDefaultPolicy;
 use ProfessionalWiki\NativeMarkdown\Application\MarkdownRenderer;
@@ -19,6 +21,7 @@ use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiPageLinkRenderer;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTemplateExpander;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTitleParser;
 use ProfessionalWiki\NativeMarkdown\Persistence\SyntaxHighlightCodeHighlighter;
+use StatusValue;
 
 /**
  * Composition root. All object graph wiring happens here; MediaWikiServices
@@ -88,12 +91,31 @@ final class NativeMarkdownExtension {
 	 * installed, and to a no-op otherwise, so highlighting is a silent
 	 * enhancement rather than a hard dependency.
 	 */
-	private function newCodeHighlighter(): CodeHighlighter {
+	public function newCodeHighlighter(): CodeHighlighter {
 		if ( ExtensionRegistry::getInstance()->isLoaded( 'SyntaxHighlight' ) ) {
-			return new SyntaxHighlightCodeHighlighter();
+			return new SyntaxHighlightCodeHighlighter( $this->newSyntaxHighlightFunction() );
 		}
 
 		return new NoOpCodeHighlighter();
+	}
+
+	/**
+	 * SyntaxHighlight gained a service in MediaWiki 1.44 and dropped its static
+	 * method in 1.45, so only MediaWiki 1.43 still needs the static method.
+	 *
+	 * @return Closure(string, string): StatusValue
+	 */
+	private function newSyntaxHighlightFunction(): Closure {
+		$services = MediaWikiServices::getInstance();
+
+		if ( !$services->hasService( 'SyntaxHighlight.SyntaxHighlight' ) ) {
+			return static fn ( string $code, string $language ): StatusValue => SyntaxHighlight::highlight( $code, $language );
+		}
+
+		/** @psalm-suppress MixedMethodCall, MixedReturnStatement The service container returns mixed. */
+		return static fn ( string $code, string $language ): StatusValue => $services
+			->getService( 'SyntaxHighlight.SyntaxHighlight' )
+			->syntaxHighlight( $code, $language );
 	}
 
 	/**

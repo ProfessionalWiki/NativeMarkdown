@@ -203,6 +203,8 @@ The full suite including integration tests runs inside a MediaWiki install, from
 php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
 ```
 
+MediaWiki 1.46 and later lack that entry point; there, run `composer phpunit -- extensions/NativeMarkdown/tests/phpunit/`.
+
 ## Release notes
 
 ### Version 1.2.0 - 2026-07-17

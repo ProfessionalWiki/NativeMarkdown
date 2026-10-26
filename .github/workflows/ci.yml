@@ -17,6 +17,14 @@ jobs:
           - mw: 'REL1_43'
             php: '8.3'
             coverage: true
+          - mw: 'REL1_44'
+            php: '8.2'
+          - mw: 'REL1_45'
+            php: '8.4'
+          - mw: 'REL1_46'
+            php: '8.4'
+          - mw: 'REL1_47'
+            php: '8.5'
 
     runs-on: ubuntu-latest
 
@@ -32,6 +40,17 @@ jobs:
           extensions: mbstring, intl
           tools: composer
 
+      # Keying the cache on the branch's current commit tests a moving branch at its
+      # tip, matching the SyntaxHighlight clone below, instead of at the commit the
+      # first run cached.
+      - name: Look up MediaWiki commit
+        id: mediawiki-commit
+        working-directory: ~
+        run: |
+          set -o pipefail
+          sha=$(git ls-remote --exit-code https://github.com/wikimedia/mediawiki refs/heads/${{ matrix.mw }} | cut -f1)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Cache MediaWiki
         id: cache-mediawiki
         uses: actions/cache@v4
@@ -40,7 +59,7 @@ jobs:
             mediawiki
             !mediawiki/extensions/
             !mediawiki/vendor/
-          key: mw_${{ matrix.mw }}-php${{ matrix.php }}-v2
+          key: mw_${{ matrix.mw }}-${{ steps.mediawiki-commit.outputs.sha }}-php${{ matrix.php }}-v2
 
       - name: Cache Composer cache
         uses: actions/cache@v4
@@ -68,7 +87,8 @@ jobs:
 
       # Optional soft dependency, not part of the checkout, so clone it on every
       # job. Removed first: a restored MediaWiki cache can already hold a copy,
-      # which would make the clone fail on a non-empty directory.
+      # which would make the clone fail on a non-empty directory. For end-of-life
+      # releases such as REL1_44, the ref is a tag: their branches get deleted.
       - name: Clone SyntaxHighlight
         run: |
           rm -rf extensions/SyntaxHighlight_GeSHi
@@ -77,9 +97,15 @@ jobs:
       - name: Run update.php
         run: php maintenance/update.php --quick
 
+      # MediaWiki 1.46 removed tests/phpunit/phpunit.php in favour of composer phpunit.
       - name: Run PHPUnit
         if: ${{ !matrix.coverage }}
-        run: php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
+        run: |
+          if [ -f tests/phpunit/phpunit.php ]; then
+            php tests/phpunit/phpunit.php extensions/NativeMarkdown/tests/phpunit/
+          else
+            composer phpunit -- extensions/NativeMarkdown/tests/phpunit/
+          fi
 
       - name: Run PHPUnit with code coverage
         if: ${{ matrix.coverage }}

@@ -4,8 +4,9 @@ declare( strict_types = 1 );
 
 namespace ProfessionalWiki\NativeMarkdown\Persistence;
 
-use MediaWiki\SyntaxHighlight\SyntaxHighlight;
+use Closure;
 use ProfessionalWiki\NativeMarkdown\Application\CodeHighlighter;
+use StatusValue;
 
 /**
  * Highlights fenced code blocks with Extension:SyntaxHighlight (Pygments), the
@@ -13,6 +14,15 @@ use ProfessionalWiki\NativeMarkdown\Application\CodeHighlighter;
  * same whether it is written in Markdown or wikitext.
  */
 final class SyntaxHighlightCodeHighlighter implements CodeHighlighter {
+
+	/**
+	 * @param Closure(string, string): StatusValue $syntaxHighlight Highlights code
+	 *   in a language, with the HTML as the status value.
+	 */
+	public function __construct(
+		private readonly Closure $syntaxHighlight
+	) {
+	}
 
 	public function highlight( string $code, string $language ): ?string {
 		// Trim the same way SyntaxHighlight's own tag hook does, for parity with a
@@ -28,7 +38,7 @@ final class SyntaxHighlightCodeHighlighter implements CodeHighlighter {
 		}
 
 		try {
-			$status = SyntaxHighlight::highlight( $trimmedCode, $language );
+			$status = ( $this->syntaxHighlight )( $trimmedCode, $language );
 		} catch ( \Exception ) {
 			// unwrap() throws a RuntimeException on unexpected Pygments output.
 			return null;
@@ -40,9 +50,9 @@ final class SyntaxHighlightCodeHighlighter implements CodeHighlighter {
 			return null;
 		}
 
-		// highlight()'s contract makes the caller responsible for loading
+		// SyntaxHighlight's contract makes the caller responsible for loading
 		// ext.pygments; modules() and styleModules() below provide that.
-		/** @psalm-suppress MixedAssignment Status::getValue() is untyped; guarded by is_string(). */
+		/** @psalm-suppress MixedAssignment StatusValue::getValue() is untyped; guarded by is_string(). */
 		$html = $status->getValue();
 
 		return is_string( $html ) ? $html : null;

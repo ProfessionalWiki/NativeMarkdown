@@ -14,6 +14,12 @@ cd mediawiki
 
 composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
 
+# MediaWiki 1.46+ generates its PHPUnit configuration from phpunit.xml.template,
+# which the GitHub tarball leaves out.
+if [ ! -f tests/phpunit/phpunit.php ]; then
+	wget "https://raw.githubusercontent.com/wikimedia/mediawiki/$MW_BRANCH/phpunit.xml.template" -nv
+fi
+
 php maintenance/install.php \
 	--dbtype sqlite \
 	--dbuser root \

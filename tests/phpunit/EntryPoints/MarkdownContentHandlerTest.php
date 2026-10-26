@@ -9,9 +9,11 @@ use MediaWiki\MainConfigNames;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Registration\ExtensionRegistry;
+use MediaWiki\Title\TitleValue;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContent;
 use ProfessionalWiki\NativeMarkdown\Tests\FrontMatterBombs;
+use ProfessionalWiki\NativeMarkdown\Tests\RecordedLinks;
 
 /**
  * @covers \ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContentHandler
@@ -31,28 +33,28 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 	public function testRendersMarkdownAsHtml(): void {
 		$output = $this->getParserOutput( "# Hello\n\nSome **bold** text" );
 
-		$this->assertStringContainsString( '<h1 id="Hello">Hello</h1>', $output->getRawText() );
-		$this->assertStringContainsString( '<strong>bold</strong>', $output->getRawText() );
+		$this->assertStringContainsString( '<h1 id="Hello">Hello</h1>', $output->getContentHolderText() );
+		$this->assertStringContainsString( '<strong>bold</strong>', $output->getContentHolderText() );
 	}
 
 	public function testRegistersInternalLinks(): void {
 		$output = $this->getParserOutput( 'See [[Linked Page]] and [[Another One|label]]' );
 
-		$this->assertArrayHasKey( 'Linked_Page', $output->getLinks()[NS_MAIN] );
-		$this->assertArrayHasKey( 'Another_One', $output->getLinks()[NS_MAIN] );
+		$this->assertContainsEquals( new TitleValue( NS_MAIN, 'Linked_Page' ), RecordedLinks::pages( $output ) );
+		$this->assertContainsEquals( new TitleValue( NS_MAIN, 'Another_One' ), RecordedLinks::pages( $output ) );
 	}
 
 	public function testPipelessLinkDisplaysTypedTextWhileRegisteringNormalizedTitle(): void {
 		$output = $this->getParserOutput( 'See [[phase one matrix]] here' );
 
-		$this->assertStringContainsString( '>phase one matrix</a>', $output->getRawText() );
-		$this->assertArrayHasKey( 'Phase_one_matrix', $output->getLinks()[NS_MAIN] );
+		$this->assertStringContainsString( '>phase one matrix</a>', $output->getContentHolderText() );
+		$this->assertContainsEquals( new TitleValue( NS_MAIN, 'Phase_one_matrix' ), RecordedLinks::pages( $output ) );
 	}
 
 	public function testRendersMissingPageAsRedLink(): void {
 		$output = $this->getParserOutput( '[[Surely This Page Is Missing]]' );
 
-		$this->assertStringContainsString( 'class="new"', $output->getRawText() );
+		$this->assertStringContainsString( 'class="new"', $output->getContentHolderText() );
 	}
 
 	public function testBatchedExistenceLookupKeepsBlueAndRedLinksApart(): void {
@@ -63,11 +65,11 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 
 		$this->assertMatchesRegularExpression(
 			'/<a href="[^"]*Batch_Existing_Page[^"]*" title="Batch Existing Page">/',
-			$output->getRawText()
+			$output->getContentHolderText()
 		);
 		$this->assertMatchesRegularExpression(
 			'/<a href="[^"]*Batch_Missing_Page[^"]*" class="new"/',
-			$output->getRawText()
+			$output->getContentHolderText()
 		);
 	}
 
@@ -75,14 +77,14 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 		$output = $this->getParserOutput( "Text\n\n[[Category:Spike]]" );
 
 		$this->assertSame( [ 'Spike' ], $output->getCategoryNames() );
-		$this->assertStringNotContainsString( 'Spike', $output->getRawText() );
+		$this->assertStringNotContainsString( 'Spike', $output->getContentHolderText() );
 	}
 
 	public function testColonPrefixedCategoryIsVisibleLinkNotAssignment(): void {
 		$output = $this->getParserOutput( '[[:Category:Spike]]' );
 
 		$this->assertSame( [], $output->getCategoryNames() );
-		$this->assertStringContainsString( 'Category:Spike', $output->getRawText() );
+		$this->assertStringContainsString( 'Category:Spike', $output->getContentHolderText() );
 	}
 
 	public function testSetsTocDataWithMediaWikiStyleAnchors(): void {
@@ -113,13 +115,13 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 		$output = $this->getParserOutput( FrontMatterBombs::aliasBombBlock() . "\nBody" );
 
 		$this->assertNull( $output->getExtensionData( 'nativemarkdown-front-matter' ) );
-		$this->assertStringContainsString( 'Body', $output->getRawText() );
+		$this->assertStringContainsString( 'Body', $output->getContentHolderText() );
 	}
 
 	public function testNoSectionEditLinksAppearInHtml(): void {
 		$output = $this->getParserOutput( "## One\n\n## Two\n\n## Three\n\n## Four" );
 
-		$this->assertStringNotContainsString( 'mw-editsection', $output->getRawText() );
+		$this->assertStringNotContainsString( 'mw-editsection', $output->getContentHolderText() );
 	}
 
 	public function testOutputGetsParserOutputWrapperClass(): void {
@@ -137,22 +139,22 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 	public function testSpecialPageLinkRendersWithoutBeingRecorded(): void {
 		$output = $this->getParserOutput( 'Go to [[Special:RecentChanges]]' );
 
-		$this->assertSame( [], $output->getLinks() );
-		$this->assertStringContainsString( 'Special:RecentChanges', $output->getRawText() );
-		$this->assertStringContainsString( '<a href=', $output->getRawText() );
+		$this->assertSame( [], RecordedLinks::pages( $output ) );
+		$this->assertStringContainsString( 'Special:RecentChanges', $output->getContentHolderText() );
+		$this->assertStringContainsString( '<a href=', $output->getContentHolderText() );
 	}
 
 	public function testNamespacePrefixedLinkRegistersInThatNamespace(): void {
 		$output = $this->getParserOutput( 'See [[Help:Phase One Matrix]]' );
 
-		$this->assertArrayHasKey( 'Phase_One_Matrix', $output->getLinks()[NS_HELP] ?? [] );
+		$this->assertContainsEquals( new TitleValue( NS_HELP, 'Phase_One_Matrix' ), RecordedLinks::pages( $output ) );
 	}
 
 	public function testLowercaseNamespacePrefixIsNormalized(): void {
 		$output = $this->getParserOutput( "Text\n\n[[category:Lowercase Prefix Cat]]" );
 
 		$this->assertSame( [ 'Lowercase_Prefix_Cat' ], $output->getCategoryNames() );
-		$this->assertStringNotContainsString( 'Lowercase', $output->getRawText() );
+		$this->assertStringNotContainsString( 'Lowercase', $output->getContentHolderText() );
 	}
 
 	public function testMissingFileEmbedRegistersImageAndRendersRedLink(): void {
@@ -162,25 +164,25 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( 'Look: [[File:Surely Missing File.png|200px|alt=Nothing]]' );
 
-		$this->assertArrayHasKey( 'Surely_Missing_File.png', $output->getImages() );
-		$this->assertSame( [], $output->getLinks() );
-		$this->assertStringContainsString( 'class="new"', $output->getRawText() );
-		$this->assertStringContainsString( 'typeof="mw:Error mw:File"', $output->getRawText() );
+		$this->assertContainsEquals( new TitleValue( NS_FILE, 'Surely_Missing_File.png' ), RecordedLinks::files( $output ) );
+		$this->assertSame( [], RecordedLinks::pages( $output ) );
+		$this->assertStringContainsString( 'class="new"', $output->getContentHolderText() );
+		$this->assertStringContainsString( 'typeof="mw:Error mw:File"', $output->getContentHolderText() );
 	}
 
 	public function testColonPrefixedFileIsPageLinkNotImage(): void {
 		$output = $this->getParserOutput( 'See [[:File:Some Linked File.png]]' );
 
-		$this->assertArrayHasKey( 'Some_Linked_File.png', $output->getLinks()[NS_FILE] ?? [] );
-		$this->assertSame( [], $output->getImages() );
+		$this->assertContainsEquals( new TitleValue( NS_FILE, 'Some_Linked_File.png' ), RecordedLinks::pages( $output ) );
+		$this->assertSame( [], RecordedLinks::files( $output ) );
 	}
 
 	public function testSamePageAnchorRendersAsFragmentLink(): void {
 		$output = $this->getParserOutput( 'See [[#History]] below' );
 
-		$this->assertSame( [], $output->getLinks() );
-		$this->assertStringContainsString( 'href="#History"', $output->getRawText() );
-		$this->assertStringContainsString( '>#History</a>', $output->getRawText() );
+		$this->assertSame( [], RecordedLinks::pages( $output ) );
+		$this->assertStringContainsString( 'href="#History"', $output->getContentHolderText() );
+		$this->assertStringContainsString( '>#History</a>', $output->getContentHolderText() );
 	}
 
 	public function testParserCacheIsSupported(): void {
@@ -192,21 +194,21 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 	public function testWikiLinkLabelHtmlIsEscapedByRealLinkRenderer(): void {
 		$output = $this->getParserOutput( '[[Some Target|<script>alert(1)</script>]]' );
 
-		$this->assertStringNotContainsString( '<script>', $output->getRawText() );
-		$this->assertStringContainsString( '&lt;script&gt;', $output->getRawText() );
+		$this->assertStringNotContainsString( '<script>', $output->getContentHolderText() );
+		$this->assertStringContainsString( '&lt;script&gt;', $output->getContentHolderText() );
 	}
 
 	public function testFileEmbedAltHtmlIsEscapedByRealFileRenderer(): void {
 		$output = $this->getParserOutput( '[[File:Surely Missing Xss.png|alt=<script>alert(1)</script>]]' );
 
-		$this->assertStringNotContainsString( '<script>', $output->getRawText() );
+		$this->assertStringNotContainsString( '<script>', $output->getContentHolderText() );
 	}
 
 	public function testRawHtmlBlockIsEscapedEndToEnd(): void {
 		$output = $this->getParserOutput( "<script>alert(document.cookie)</script>\n\nbody text" );
 
-		$this->assertStringNotContainsString( '<script>', $output->getRawText() );
-		$this->assertStringContainsString( 'body text', $output->getRawText() );
+		$this->assertStringNotContainsString( '<script>', $output->getContentHolderText() );
+		$this->assertStringContainsString( 'body text', $output->getContentHolderText() );
 	}
 
 	public function testInterwikiLinkIsRegisteredAsInterwiki(): void {
@@ -214,8 +216,8 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( 'See [[wikipedia:Berlin]] for details' );
 
-		$this->assertArrayHasKey( 'Berlin', $output->getInterwikiLinks()['wikipedia'] ?? [] );
-		$this->assertSame( [], $output->getLinks() );
+		$this->assertContainsEquals( new TitleValue( NS_MAIN, 'Berlin', '', 'wikipedia' ), RecordedLinks::interwikiPages( $output ) );
+		$this->assertSame( [], RecordedLinks::pages( $output ) );
 	}
 
 	public function testInterwikiFragmentOnlyLinkKeepsPrefixInLabel(): void {
@@ -223,7 +225,7 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( 'See [[wikipedia:#History]] for details' );
 
-		$this->assertStringContainsString( '>wikipedia:#History</a>', $output->getRawText() );
+		$this->assertStringContainsString( '>wikipedia:#History</a>', $output->getContentHolderText() );
 	}
 
 	public function testMarkdownPageLoadsContentStyles(): void {
@@ -237,7 +239,7 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( "```python\nprint('hi')\n```" );
 
-		$this->assertStringContainsString( 'mw-highlight-lang-python', $output->getRawText() );
+		$this->assertStringContainsString( 'mw-highlight-lang-python', $output->getContentHolderText() );
 		$this->assertContains( 'ext.pygments', $output->getModuleStyles() );
 		$this->assertContains( 'ext.pygments.view', $output->getModules() );
 	}
@@ -247,7 +249,7 @@ class MarkdownContentHandlerTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( "```\nplain code\n```" );
 
-		$this->assertStringContainsString( '<pre><code>plain code', $output->getRawText() );
+		$this->assertStringContainsString( '<pre><code>plain code', $output->getContentHolderText() );
 		$this->assertNotContains( 'ext.pygments', $output->getModuleStyles() );
 	}
 

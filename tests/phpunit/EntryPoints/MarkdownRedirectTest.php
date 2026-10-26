@@ -7,9 +7,11 @@ namespace ProfessionalWiki\NativeMarkdown\Tests\EntryPoints;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
+use MediaWiki\Title\TitleValue;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContent;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContentHandler;
+use ProfessionalWiki\NativeMarkdown\Tests\RecordedLinks;
 
 /**
  * Redirect support for markdown pages: the `#REDIRECT [[Target]]` syntax is
@@ -49,7 +51,7 @@ class MarkdownRedirectTest extends MediaWikiIntegrationTestCase {
 	public function testRedirectPageRegistersTargetInPageLinks(): void {
 		$output = $this->getParserOutput( '#REDIRECT [[Redirect Link Target]]' );
 
-		$this->assertArrayHasKey( 'Redirect_Link_Target', $output->getLinks()[NS_MAIN] ?? [] );
+		$this->assertContainsEquals( new TitleValue( NS_MAIN, 'Redirect_Link_Target' ), RecordedLinks::pages( $output ) );
 	}
 
 	public function testRedirectPageLoadsRedirectPageModuleStyles(): void {
@@ -107,13 +109,13 @@ class MarkdownRedirectTest extends MediaWikiIntegrationTestCase {
 	public function testRedirectPageRegistersTrailingLink(): void {
 		$output = $this->getParserOutput( "#REDIRECT [[Primary Target]]\n\nSee also [[Trailing Related Page]]." );
 
-		$this->assertArrayHasKey( 'Trailing_Related_Page', $output->getLinks()[NS_MAIN] ?? [] );
+		$this->assertContainsEquals( new TitleValue( NS_MAIN, 'Trailing_Related_Page' ), RecordedLinks::pages( $output ) );
 	}
 
 	public function testRedirectPageRendersTrailingContentBelowRedirectView(): void {
 		$output = $this->getParserOutput( "#REDIRECT [[Bodied Target]]\n\nTrailing prose after the redirect line." );
 
-		$this->assertStringContainsString( 'Trailing prose after the redirect line.', $output->getRawText() );
+		$this->assertStringContainsString( 'Trailing prose after the redirect line.', $output->getContentHolderText() );
 	}
 
 	public function testRedirectPageWithTrailingContentStillRendersRedirectView(): void {
@@ -127,7 +129,7 @@ class MarkdownRedirectTest extends MediaWikiIntegrationTestCase {
 	public function testBareRedirectPageRendersNoBodyContent(): void {
 		$output = $this->getParserOutput( '#REDIRECT [[Bare Target]]' );
 
-		$this->assertSame( '', $output->getRawText() );
+		$this->assertSame( '', $output->getContentHolderText() );
 	}
 
 }

@@ -7,9 +7,11 @@ namespace ProfessionalWiki\NativeMarkdown\Tests\Persistence;
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Title\TitleValue;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\Application\TemplateCall;
 use ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTemplateExpander;
+use ProfessionalWiki\NativeMarkdown\Tests\RecordedLinks;
 
 /**
  * @covers \ProfessionalWiki\NativeMarkdown\Persistence\MediaWikiTemplateExpander
@@ -61,7 +63,7 @@ class MediaWikiTemplateExpanderTest extends MediaWikiIntegrationTestCase {
 		$output = new ParserOutput();
 		$expander->mergeInto( $output );
 
-		$this->assertArrayHasKey( 'Box', $output->getTemplates()[NS_TEMPLATE] ?? [] );
+		$this->assertContainsEquals( new TitleValue( NS_TEMPLATE, 'Box' ), RecordedLinks::templates( $output ) );
 	}
 
 	public function testMergeIntoRecordsCategoryAddedByTemplate(): void {
@@ -85,9 +87,9 @@ class MediaWikiTemplateExpanderTest extends MediaWikiIntegrationTestCase {
 		$output = new ParserOutput();
 		$expander->mergeInto( $output );
 
-		$templates = $output->getTemplates()[NS_TEMPLATE] ?? [];
-		$this->assertArrayHasKey( 'First', $templates );
-		$this->assertArrayHasKey( 'Second', $templates );
+		$templates = RecordedLinks::templates( $output );
+		$this->assertContainsEquals( new TitleValue( NS_TEMPLATE, 'First' ), $templates );
+		$this->assertContainsEquals( new TitleValue( NS_TEMPLATE, 'Second' ), $templates );
 	}
 
 }
