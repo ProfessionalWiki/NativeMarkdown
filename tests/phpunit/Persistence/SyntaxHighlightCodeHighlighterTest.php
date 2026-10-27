@@ -6,10 +6,11 @@ namespace ProfessionalWiki\NativeMarkdown\Tests\Persistence;
 
 use MediaWiki\Registration\ExtensionRegistry;
 use MediaWikiIntegrationTestCase;
-use ProfessionalWiki\NativeMarkdown\Persistence\SyntaxHighlightCodeHighlighter;
+use ProfessionalWiki\NativeMarkdown\NativeMarkdownExtension;
 
 /**
  * @covers \ProfessionalWiki\NativeMarkdown\Persistence\SyntaxHighlightCodeHighlighter
+ * @covers \ProfessionalWiki\NativeMarkdown\NativeMarkdownExtension
  */
 class SyntaxHighlightCodeHighlighterTest extends MediaWikiIntegrationTestCase {
 
@@ -22,7 +23,7 @@ class SyntaxHighlightCodeHighlighterTest extends MediaWikiIntegrationTestCase {
 	}
 
 	private function highlight( string $code, string $language ): ?string {
-		return ( new SyntaxHighlightCodeHighlighter() )->highlight( $code, $language );
+		return NativeMarkdownExtension::getInstance()->newCodeHighlighter()->highlight( $code, $language );
 	}
 
 	public function testKnownLanguageIsHighlightedIntoPygmentsMarkup(): void {

@@ -6,8 +6,10 @@ namespace ProfessionalWiki\NativeMarkdown\Tests\EntryPoints;
 
 use MediaWiki\Page\PageReferenceValue;
 use MediaWiki\Parser\ParserOutput;
+use MediaWiki\Title\TitleValue;
 use MediaWikiIntegrationTestCase;
 use ProfessionalWiki\NativeMarkdown\EntryPoints\MarkdownContent;
+use ProfessionalWiki\NativeMarkdown\Tests\RecordedLinks;
 
 /**
  * End-to-end template transclusion on markdown pages, exercised through the
@@ -42,7 +44,7 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( 'Intro {{Greeting}} outro' );
 
-		$this->assertStringContainsString( 'Hello from the template', $output->getRawText() );
+		$this->assertStringContainsString( 'Hello from the template', $output->getContentHolderText() );
 	}
 
 	public function testBlockTemplateRendersTableFromWikitext(): void {
@@ -50,8 +52,8 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( '{{Infobox}}' );
 
-		$this->assertStringContainsString( '<table', $output->getRawText() );
-		$this->assertStringContainsString( 'Cell content', $output->getRawText() );
+		$this->assertStringContainsString( '<table', $output->getContentHolderText() );
+		$this->assertStringContainsString( 'Cell content', $output->getContentHolderText() );
 	}
 
 	public function testTransclusionRecordsTemplateDependency(): void {
@@ -59,7 +61,7 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( '{{Greeting}}' );
 
-		$this->assertArrayHasKey( 'Greeting', $output->getTemplates()[NS_TEMPLATE] ?? [] );
+		$this->assertContainsEquals( new TitleValue( NS_TEMPLATE, 'Greeting' ), RecordedLinks::templates( $output ) );
 	}
 
 	public function testTemplateDependencyIsRecordedEvenWithoutHtml(): void {
@@ -67,7 +69,7 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( '{{Greeting}}', generateHtml: false );
 
-		$this->assertArrayHasKey( 'Greeting', $output->getTemplates()[NS_TEMPLATE] ?? [] );
+		$this->assertContainsEquals( new TitleValue( NS_TEMPLATE, 'Greeting' ), RecordedLinks::templates( $output ) );
 	}
 
 	public function testCategoryAddedByTemplateIsRegisteredOnThePage(): void {
@@ -83,7 +85,7 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( '{{Echo|<script>alert(1)</script>}}' );
 
-		$this->assertStringNotContainsString( '<script>alert', $output->getRawText() );
+		$this->assertStringNotContainsString( '<script>alert', $output->getContentHolderText() );
 	}
 
 	public function testTemplateHeadingsDoNotAppearInThePageTableOfContents(): void {
@@ -118,9 +120,9 @@ class MarkdownTransclusionTest extends MediaWikiIntegrationTestCase {
 
 		$output = $this->getParserOutput( '{{Greeting}}' );
 
-		$this->assertStringContainsString( '{{Greeting}}', $output->getRawText() );
-		$this->assertStringNotContainsString( 'Hello from the template', $output->getRawText() );
-		$this->assertSame( [], $output->getTemplates() );
+		$this->assertStringContainsString( '{{Greeting}}', $output->getContentHolderText() );
+		$this->assertStringNotContainsString( 'Hello from the template', $output->getContentHolderText() );
+		$this->assertSame( [], RecordedLinks::templates( $output ) );
 	}
 
 }

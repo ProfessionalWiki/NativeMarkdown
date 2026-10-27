@@ -154,7 +154,11 @@ final class MarkdownContentHandler extends TextContentHandler {
 		// headings, not from headings inside transcluded templates.
 		$this->registerSections( $output, $rendered );
 
-		$output->setRawText( $cpoParams->getGenerateHtml() ? $rendered->html : null );
+		// Without generated HTML the output keeps no text; setContentHolderText()
+		// accepts null only from MediaWiki 1.45 on.
+		if ( $cpoParams->getGenerateHtml() ) {
+			$output->setContentHolderText( $rendered->html );
+		}
 
 		if ( $redirectTarget !== null ) {
 			$this->addRedirectIndicator( $output, $cpoParams, $redirectTarget );
