@@ -207,6 +207,15 @@ MediaWiki 1.46 and later lack that entry point; there, run `composer phpunit -- 
 
 ## Release notes
 
+### Version 1.2.1 - 2026-10-27
+
+* Fixed a fatal error on MediaWiki 1.45 and later for pages with a fenced code block that names a language, when the
+  SyntaxHighlight extension is installed
+* Fixed a fatal error on the upcoming MediaWiki 1.47 for every Markdown page
+* Wiki links without a label, such as `[[phase one matrix]]`, now display the text as typed, as wikitext does, instead
+  of the normalized page title ("Phase one matrix")
+* Fixed deprecation warnings on MediaWiki 1.44 when highlighting code blocks
+
 ### Version 1.2.0 - 2026-07-17
 
 * A `ConvertToMarkdownModel` maintenance script converts existing wikitext pages to the Markdown content
