@@ -14,12 +14,6 @@
 			<directory>tests/phpunit/Application</directory>
 			<exclude>tests/phpunit/Application/HeadingAnchorParityTest.php</exclude>
 		</testsuite>
-		<!-- Needs MediaWiki. Run through core's tests/phpunit/phpunit.php. -->
-		<testsuite name="Integration">
-			<directory>tests/phpunit/EntryPoints</directory>
-			<directory>tests/phpunit/Maintenance</directory>
-			<file>tests/phpunit/Application/HeadingAnchorParityTest.php</file>
-		</testsuite>
 	</testsuites>
 	<coverage>
 		<include>
