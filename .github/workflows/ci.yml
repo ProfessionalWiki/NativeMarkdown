@@ -109,7 +109,7 @@ jobs:
 
       - name: Run PHPUnit with code coverage
         if: ${{ matrix.coverage }}
-        run: php tests/phpunit/phpunit.php -c extensions/NativeMarkdown --coverage-clover coverage.xml
+        run: php tests/phpunit/phpunit.php -c extensions/NativeMarkdown --coverage-clover coverage.xml extensions/NativeMarkdown/tests/phpunit/
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.coverage }}
